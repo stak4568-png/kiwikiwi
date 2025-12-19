@@ -1,25 +1,39 @@
+// CardDisplay.cs
+// ì¹´ë“œ ë¹„ì£¼ì–¼ ë° ìƒí˜¸ì‘ìš© - íš¨ê³¼ ì‹œìŠ¤í…œ í†µí•© ë²„ì „
+
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
+using System.Collections.Generic;
 
-public class CardDisplay : MonoBehaviour, IPointerClickHandler
+public class CardDisplay : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
 {
     [Header("Data Sources")]
-    public CardData cardData;         // Ä«µå ±âº» µ¥ÀÌÅÍ
-    public ElementIconData iconData;  // ¼Ó¼º ¾ÆÀÌÄÜ µ¥ÀÌÅÍ
+    public CardData cardData;
+    public ElementIconData iconData;
 
-    [Header("Live Stats (ÀüÅõ ½Ç½Ã°£ µ¥ÀÌÅÍ)")]
-    public int currentHealth;         // ÇöÀç Ã¼·Â
-    public int currentAttack;         // ÇöÀç °ø°İ·Â
+    [Header("Live Stats (ì „íˆ¬ ì‹¤ì‹œê°„ ë°ì´í„°)")]
+    public int currentHealth;
+    public int currentAttack;
+
+    [Header("Runtime Keywords (ì‹¤ì‹œê°„ í‚¤ì›Œë“œ)")]
+    public List<Keyword> activeKeywords = new List<Keyword>();
+
+    [Header("Combat State")]
+    public bool canAttack = false;          // ì´ë²ˆ í„´ ê³µê²© ê°€ëŠ¥ ì—¬ë¶€
+    public int attacksThisTurn = 0;         // ì´ë²ˆ í„´ ê³µê²© íšŸìˆ˜
+    public bool hasDivineShield = false;    // ì²œìƒì˜ ë³´í˜¸ë§‰ í™œì„±í™”
+    public bool isStealthed = false;        // ì€ì‹  ìƒíƒœ
+    public bool hasReborn = false;          // í™˜ìƒ ì‚¬ìš© ê°€ëŠ¥
 
     [Header("State")]
-    public bool isArtRevealed = false;   // ÀÏ·¯½ºÆ® ÇØ±İ ¿©ºÎ
-    public bool isInfoRevealed = false;  // È¿°ú ÅØ½ºÆ® ÇØ±İ ¿©ºÎ
+    public bool isArtRevealed = false;
+    public bool isInfoRevealed = false;
 
     [Header("Visual Groups")]
-    public GameObject handVisual;   // ¼ÕÆĞ¿ë UI ±×·ì
-    public GameObject fieldVisual;  // ÇÊµå¿ë UI ±×·ì
+    public GameObject handVisual;
+    public GameObject fieldVisual;
 
     [Header("Hand Visual References")]
     public Image cardImage;
@@ -36,21 +50,43 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler
     public TMP_Text fieldATK;
     public TMP_Text fieldHP;
 
+    [Header("Keyword Icons (ì„ íƒ)")]
+    public GameObject tauntIcon;
+    public GameObject divineShieldIcon;
+    public GameObject stealthIcon;
+
     void Start()
     {
-        // 1. ÃÊ±â ½Ç½Ã°£ ½ºÅÈ ¼³Á¤ (µ¥ÀÌÅÍ·ÎºÎÅÍ º¹»ç)
-        if (cardData is MonsterCardData monster)
-        {
-            currentHealth = monster.health;
-            currentAttack = monster.attack;
-        }
-
-        // 2. ÃÊ±â ±¸¿ª È®ÀÎ ¹× UI °»½Å
+        InitializeFromData();
         UpdateSourceZone();
         UpdateCardUI();
     }
 
-    // ±¸¿ª(¼ÕÆĞ/ÇÊµå)¿¡ µû¶ó ¾î¶² ºñÁÖ¾óÀ» ÄÓÁö °áÁ¤
+    /// <summary>
+    /// ì¹´ë“œ ë°ì´í„°ë¡œë¶€í„° ì´ˆê¸°í™”
+    /// </summary>
+    public void InitializeFromData()
+    {
+        if (cardData is MonsterCardData monster)
+        {
+            currentHealth = monster.health;
+            currentAttack = monster.attack;
+
+            // ê¸°ë³¸ í‚¤ì›Œë“œ ë³µì‚¬
+            activeKeywords.Clear();
+            activeKeywords.AddRange(monster.keywords);
+
+            // íŠ¹ìˆ˜ í‚¤ì›Œë“œ ì´ˆê¸°í™”
+            hasDivineShield = HasKeyword(Keyword.Divine);
+            isStealthed = HasKeyword(Keyword.Stealth);
+            hasReborn = HasKeyword(Keyword.Reborn);
+            canAttack = HasKeyword(Keyword.Charge); // ëŒì§„ ìˆìœ¼ë©´ ë°”ë¡œ ê³µê²© ê°€ëŠ¥
+        }
+    }
+
+    /// <summary>
+    /// êµ¬ì—­ì— ë”°ë¼ ë¹„ì£¼ì–¼ ì „í™˜
+    /// </summary>
     public void UpdateSourceZone()
     {
         if (transform.parent == null) return;
@@ -62,7 +98,6 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler
             if (handVisual != null) handVisual.SetActive(isHand);
             if (fieldVisual != null) fieldVisual.SetActive(!isHand);
 
-            // ¼ÕÆĞ¿¡ ÀÖÀ¸¸é ³» Ä«µåÀÌ¹Ç·Î ÀÚµ¿ ÇØ±İ
             if (isHand)
             {
                 isArtRevealed = true;
@@ -71,23 +106,29 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler
         }
     }
 
-    // UI ¿ä¼Òµé¿¡ µ¥ÀÌÅÍ¸¦ Àû¿ë
+    /// <summary>
+    /// UI ê°±ì‹ 
+    /// </summary>
     public void UpdateCardUI()
     {
         if (cardData == null) return;
 
-        // --- °øÅë µ¥ÀÌÅÍ ÁØºñ ---
-        Sprite targetArt = isArtRevealed ? (cardData.originalArt ?? cardData.censoredArt) : (cardData.censoredArt ?? cardData.originalArt);
-        string targetDesc = isInfoRevealed ? cardData.description : cardData.censoredDescription;
+        Sprite targetArt = isArtRevealed 
+            ? (cardData.originalArt ?? cardData.censoredArt) 
+            : (cardData.censoredArt ?? cardData.originalArt);
 
-        // --- A. ¼ÕÆĞ ºñÁÖ¾ó ¾÷µ¥ÀÌÆ® ---
+        // íš¨ê³¼ ì„¤ëª… í¬í•¨í•œ í…ìŠ¤íŠ¸
+        string targetDesc = GetFullDescription();
+
+        // Hand Visual
         if (handVisual != null && handVisual.activeSelf)
         {
             if (nameText != null) nameText.text = cardData.cardName;
             if (manaText != null) manaText.text = cardData.manaCost.ToString();
             if (cardImage != null) cardImage.sprite = targetArt;
             if (descriptionText != null) descriptionText.text = targetDesc;
-            if (elementImage != null && iconData != null) elementImage.sprite = iconData.GetIcon(cardData.element);
+            if (elementImage != null && iconData != null) 
+                elementImage.sprite = iconData.GetIcon(cardData.element);
 
             if (cardData is MonsterCardData)
             {
@@ -96,21 +137,179 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler
             }
         }
 
-        // --- B. ÇÊµå ºñÁÖ¾ó ¾÷µ¥ÀÌÆ® ---
+        // Field Visual
         if (fieldVisual != null && fieldVisual.activeSelf)
         {
             if (fieldArt != null) fieldArt.sprite = targetArt;
             if (fieldATK != null) fieldATK.text = currentAttack.ToString();
             if (fieldHP != null) fieldHP.text = currentHealth.ToString();
-            if (fieldElement != null && iconData != null) fieldElement.sprite = iconData.GetIcon(cardData.element);
+            if (fieldElement != null && iconData != null) 
+                fieldElement.sprite = iconData.GetIcon(cardData.element);
+        }
+
+        // í‚¤ì›Œë“œ ì•„ì´ì½˜ ì—…ë°ì´íŠ¸
+        UpdateKeywordIcons();
+    }
+
+    /// <summary>
+    /// ì „ì²´ ì„¤ëª… í…ìŠ¤íŠ¸ ìƒì„± (íš¨ê³¼ í¬í•¨)
+    /// </summary>
+    string GetFullDescription()
+    {
+        if (!isInfoRevealed)
+            return cardData.censoredDescription;
+
+        string baseDesc = cardData.description;
+
+        if (cardData is MonsterCardData monster)
+        {
+            string effectsDesc = monster.GetEffectsDescription();
+            if (!string.IsNullOrEmpty(effectsDesc))
+            {
+                return effectsDesc + (string.IsNullOrEmpty(baseDesc) ? "" : "\n" + baseDesc);
+            }
+        }
+
+        return baseDesc;
+    }
+
+    /// <summary>
+    /// í‚¤ì›Œë“œ ì•„ì´ì½˜ í‘œì‹œ ì—…ë°ì´íŠ¸
+    /// </summary>
+    void UpdateKeywordIcons()
+    {
+        if (tauntIcon != null) tauntIcon.SetActive(HasKeyword(Keyword.Taunt));
+        if (divineShieldIcon != null) divineShieldIcon.SetActive(hasDivineShield);
+        if (stealthIcon != null) stealthIcon.SetActive(isStealthed);
+    }
+
+    // === í‚¤ì›Œë“œ ê´€ë¦¬ ===
+
+    public bool HasKeyword(Keyword keyword)
+    {
+        return activeKeywords.Contains(keyword);
+    }
+
+    public void AddKeyword(Keyword keyword)
+    {
+        if (!activeKeywords.Contains(keyword))
+        {
+            activeKeywords.Add(keyword);
+
+            // íŠ¹ìˆ˜ í‚¤ì›Œë“œ ì²˜ë¦¬
+            if (keyword == Keyword.Divine) hasDivineShield = true;
+            if (keyword == Keyword.Stealth) isStealthed = true;
+            if (keyword == Keyword.Reborn) hasReborn = true;
+
+            UpdateKeywordIcons();
         }
     }
 
-    // ÀüÅõ ½Ã µ¥¹ÌÁö¸¦ ¹Ş´Â ÇÔ¼ö
+    public void RemoveKeyword(Keyword keyword)
+    {
+        activeKeywords.Remove(keyword);
+        UpdateKeywordIcons();
+    }
+
+    // === ì „íˆ¬ ê´€ë ¨ ===
+
+    /// <summary>
+    /// ì†Œí™˜ ì‹œ í˜¸ì¶œ
+    /// </summary>
+    public void OnSummoned()
+    {
+        // ëŒì§„ì´ ì—†ìœ¼ë©´ ì†Œí™˜ í„´ì— ê³µê²© ë¶ˆê°€
+        canAttack = HasKeyword(Keyword.Charge);
+        attacksThisTurn = 0;
+
+        // ì†Œí™˜ íš¨ê³¼ ë°œë™
+        if (EffectManager.instance != null)
+        {
+            EffectManager.instance.TriggerEffects(this, EffectTiming.OnSummon);
+        }
+
+        Debug.Log($"{cardData.cardName} ì†Œí™˜ë¨! ê³µê²© ê°€ëŠ¥: {canAttack}");
+    }
+
+    /// <summary>
+    /// í„´ ì‹œì‘ ì‹œ í˜¸ì¶œ
+    /// </summary>
+    public void OnTurnStart()
+    {
+        canAttack = true;
+        attacksThisTurn = 0;
+
+        // í„´ ì‹œì‘ íš¨ê³¼ ë°œë™
+        if (EffectManager.instance != null)
+        {
+            EffectManager.instance.TriggerEffects(this, EffectTiming.OnTurnStart);
+        }
+    }
+
+    /// <summary>
+    /// ê³µê²© ê°€ëŠ¥ íšŸìˆ˜ ë°˜í™˜
+    /// </summary>
+    public int GetMaxAttacksPerTurn()
+    {
+        return HasKeyword(Keyword.Windfury) ? 2 : 1;
+    }
+
+    /// <summary>
+    /// ê³µê²© ê°€ëŠ¥ ì—¬ë¶€ í™•ì¸
+    /// </summary>
+    public bool CanAttackNow()
+    {
+        if (!canAttack) return false;
+        if (attacksThisTurn >= GetMaxAttacksPerTurn()) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// ê³µê²© ì‹¤í–‰ ì‹œ í˜¸ì¶œ
+    /// </summary>
+    public void OnAttack(CardDisplay target)
+    {
+        attacksThisTurn++;
+
+        // ì€ì‹  í•´ì œ
+        if (isStealthed)
+        {
+            isStealthed = false;
+            RemoveKeyword(Keyword.Stealth);
+            Debug.Log($"{cardData.cardName}ì˜ ì€ì‹ ì´ í•´ì œë¨!");
+        }
+
+        // ê³µê²© íš¨ê³¼ ë°œë™
+        if (EffectManager.instance != null)
+        {
+            EffectManager.instance.TriggerEffects(this, EffectTiming.OnAttack, target);
+        }
+    }
+
+    /// <summary>
+    /// ë°ë¯¸ì§€ ë°›ê¸°
+    /// </summary>
     public void TakeDamage(int amount)
     {
+        // ì²œìƒì˜ ë³´í˜¸ë§‰ ì²´í¬
+        if (hasDivineShield && amount > 0)
+        {
+            hasDivineShield = false;
+            Debug.Log($"{cardData.cardName}ì˜ ì²œìƒì˜ ë³´í˜¸ë§‰ì´ í”¼í•´ë¥¼ í¡ìˆ˜!");
+            UpdateKeywordIcons();
+            return;
+        }
+
         currentHealth -= amount;
-        Debug.Log($"{cardData.cardName}ÀÌ(°¡) {amount}ÀÇ ÇÇÇØ¸¦ ÀÔÀ½. ³²Àº Ã¼·Â: {currentHealth}");
+        Debug.Log($"{cardData.cardName}ì´(ê°€) {amount}ì˜ í”¼í•´ë¥¼ ì…ìŒ. ë‚¨ì€ ì²´ë ¥: {currentHealth}");
+
+        // í”¼í•´ íš¨ê³¼ ë°œë™
+        if (EffectManager.instance != null)
+        {
+            var context = new EffectContext(this, EffectTiming.OnDamaged);
+            context.damageAmount = amount;
+            EffectManager.instance.TriggerEffects(this, EffectTiming.OnDamaged);
+        }
 
         if (currentHealth <= 0)
         {
@@ -118,24 +317,75 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler
         }
         else
         {
-            UpdateCardUI(); // Ã¼·Â ÅØ½ºÆ® Áï½Ã °»½Å
+            UpdateCardUI();
         }
     }
 
-    // Ä«µå ÆÄ±« Ã³¸®
+    /// <summary>
+    /// ì¹´ë“œ íŒŒê´´
+    /// </summary>
     void Die()
     {
-        Debug.Log($"{cardData.cardName}ÀÌ(°¡) ÆÄ±«µÇ¾ú½À´Ï´Ù.");
-        // ¿©±â¼­ ÆÄ±« ÀÌÆåÆ®³ª »ç¿îµå Àç»ı °¡´É
+        Debug.Log($"{cardData.cardName}ì´(ê°€) íŒŒê´´ë˜ì—ˆìŠµë‹ˆë‹¤.");
+
+        // ì£½ìŒ íš¨ê³¼ ë°œë™
+        if (EffectManager.instance != null)
+        {
+            EffectManager.instance.TriggerEffects(this, EffectTiming.OnDeath);
+        }
+
+        // í™˜ìƒ ì²´í¬
+        if (hasReborn)
+        {
+            hasReborn = false;
+            currentHealth = 1;
+            Debug.Log($"{cardData.cardName}ì´(ê°€) í™˜ìƒí–ˆìŠµë‹ˆë‹¤!");
+            UpdateCardUI();
+            return;
+        }
+
+        // TODO: íŒŒê´´ ì• ë‹ˆë©”ì´ì…˜, ë¬˜ì§€ë¡œ ì´ë™ ë“±
         Destroy(gameObject);
     }
 
-    // Å¬¸¯ ½Ã È®´ë Ã¢ Ç¥½Ã
+    // === í´ë¦­ ì´ë²¤íŠ¸ ===
+
     public void OnPointerClick(PointerEventData eventData)
     {
+        // ë¦´ë¦¬ìŠ¤ ëª¨ë“œì¼ ë•Œ
+        if (ReleaseManager.instance != null && ReleaseManager.instance.IsInReleaseMode())
+        {
+            if (ReleaseManager.instance.TryReleaseCard(this))
+            {
+                return; // ë¦´ë¦¬ìŠ¤ ì„±ê³µ
+            }
+            // ë¦´ë¦¬ìŠ¤ ë¶ˆê°€í•œ ì¹´ë“œë©´ ê³„ì† ì§„í–‰
+        }
+
+        // íƒ€ê²Ÿ ì„ íƒ ëª¨ë“œì¼ ë•Œ
+        if (EffectManager.instance != null && EffectManager.instance.IsWaitingForTarget())
+        {
+            EffectManager.instance.OnTargetSelected(this);
+            return;
+        }
+
+        // ì¼ë°˜ í´ë¦­ - í™•ëŒ€ ë³´ê¸°
         if (CardZoomManager.instance != null)
         {
             CardZoomManager.instance.ShowCardZoom(this);
+        }
+    }
+
+    /// <summary>
+    /// ë§ˆìš°ìŠ¤ ì˜¤ë²„ ì‹œ ë¦´ë¦¬ìŠ¤ ë¯¸ë¦¬ë³´ê¸° (ì„ íƒì  êµ¬í˜„)
+    /// </summary>
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        if (ReleaseManager.instance != null && ReleaseManager.instance.CanBeReleased(this))
+        {
+            int previewMana = ReleaseManager.instance.PreviewManaRecovery(this);
+            Debug.Log($"ë¦´ë¦¬ìŠ¤ ì‹œ ë§ˆë‚˜ +{previewMana}");
+            // TODO: íˆ´íŒ í‘œì‹œ
         }
     }
 }

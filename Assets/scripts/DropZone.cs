@@ -1,47 +1,84 @@
+// DropZone.cs
+// ì¹´ë“œ ë“œë¡­ ì˜ì—­ - íš¨ê³¼ ì‹œìŠ¤í…œ í†µí•© ë²„ì „
+
 using UnityEngine;
 using UnityEngine.EventSystems;
 
 public class DropZone : MonoBehaviour, IDropHandler
 {
-    public ZoneType zoneType; // ÀÎ½ºÆåÅÍ¿¡¼­ ¼³Á¤ (Hand, PlayerField, EnemyField)
-    public int maxCards = 5;  // ÇÊµå ÃÖ´ë ¹èÄ¡ ¼ö
+    public ZoneType zoneType;
+    public int maxCards = 5;
 
     public void OnDrop(PointerEventData eventData)
     {
-        Draggable d = eventData.pointerDrag.GetComponent<Draggable>();
+        Draggable d = eventData.pointerDrag?.GetComponent<Draggable>();
         if (d == null) return;
 
-        // [±ÔÄ¢ 1] Àû ÇÊµå·Î´Â ³» Ä«µå¸¦ ´øÁú ¼ö ¾øÀ½
+        // [ê·œì¹™ 1] ì  í•„ë“œë¡œëŠ” ë“œë¡­ ë¶ˆê°€
         if (zoneType == ZoneType.EnemyField) return;
 
-        // [±ÔÄ¢ 2] ÀÌ¹Ì ÇÊµå¿¡ ³ª°£ Ä«µå´Â ´Ù½Ã ¼ÕÆĞ·Î °¡Á®¿Ã ¼ö ¾øÀ½
+        // [ê·œì¹™ 2] í•„ë“œ ì¹´ë“œëŠ” ì†íŒ¨ë¡œ íšŒìˆ˜ ë¶ˆê°€
         if (zoneType == ZoneType.Hand && d.sourceZone == ZoneType.PlayerField)
         {
-            Debug.Log("ÇÊµå¿¡ ¼ÒÈ¯µÈ ¸ó½ºÅÍ´Â È¸¼öÇÒ ¼ö ¾ø½À´Ï´Ù.");
+            Debug.Log("í•„ë“œì— ì†Œí™˜ëœ ëª¬ìŠ¤í„°ëŠ” íšŒìˆ˜í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
             return;
         }
 
-        // [±ÔÄ¢ 3] ¼ÕÆĞ¿¡¼­ ÇÊµå·Î ³¾ ¶§¸¸ ¸¶³ª Ã¼Å© ¹× ¼ÒÈ¯ ½ÇÇà
+        // [ê·œì¹™ 3] ì†íŒ¨ â†’ í•„ë“œ ì†Œí™˜
         if (zoneType == ZoneType.PlayerField && d.sourceZone == ZoneType.Hand)
         {
             CardDisplay card = d.GetComponent<CardDisplay>();
+            if (card == null) return;
 
-            // ¸ó½ºÅÍ ¼ÒÈ¯ Á¶°Ç: ÀÚ¸® ÀÖÀ½ && ¸¶³ª ÃæºĞ
-            if (this.transform.childCount < maxCards && GameManager.instance.TrySpendMana(card.cardData.manaCost))
+            // ì¡°ê±´ ì²´í¬: ìë¦¬ + ë§ˆë‚˜
+            if (transform.childCount >= maxCards)
             {
-                d.parentToReturnTo = this.transform; // ÇÊµå·Î ¼Ò¼Ó º¯°æ Çã¿ë
-                Debug.Log($"{card.cardData.cardName} ¼ÒÈ¯!");
+                Debug.Log("ì†Œí™˜ ë¶ˆê°€: í•„ë“œ ê°€ë“ ì°¸");
+                return;
             }
-            else
+
+            if (!GameManager.instance.TrySpendMana(card.cardData.manaCost))
             {
-                Debug.Log("¼ÒÈ¯ ºÒ°¡: ¸¶³ª ºÎÁ· ¶Ç´Â ÇÊµå °¡µæ Âü");
-                // d.parentToReturnTo¸¦ ¹Ù²ÙÁö ¾ÊÀ¸¹Ç·Î ÀÚµ¿À¸·Î ¼ÕÆĞ·Î µ¹¾Æ°¨
+                Debug.Log("ì†Œí™˜ ë¶ˆê°€: ë§ˆë‚˜ ë¶€ì¡±");
+                return;
             }
+
+            // ì†Œí™˜ ì„±ê³µ!
+            d.parentToReturnTo = this.transform;
+            Debug.Log($"{card.cardData.cardName} ì†Œí™˜!");
+
+            // â˜… ì†Œí™˜ íš¨ê³¼ ë°œë™ â˜…
+            // Draggable.OnEndDragì—ì„œ UpdateSourceZone í›„ í˜¸ì¶œë˜ë„ë¡
+            // ì—¬ê¸°ì„œëŠ” í”Œë˜ê·¸ë§Œ ì„¤ì •í•˜ê³ , ì‹¤ì œ íš¨ê³¼ëŠ” CardDisplayì—ì„œ ì²˜ë¦¬
+            card.Invoke(nameof(card.OnSummoned), 0.1f);
         }
         else
         {
-            // ±× ¿ÜÀÇ °æ¿ì (¼ÕÆĞ ¾È¿¡¼­ ¼ø¼­ ¹Ù²Ù±â µî)´Â ÀÚÀ¯·Ó°Ô Çã¿ë
+            // ì†íŒ¨ ë‚´ ì¬ì •ë ¬ ë“±
             d.parentToReturnTo = this.transform;
         }
+    }
+
+    /// <summary>
+    /// ë„ë°œ ì¹´ë“œê°€ ìˆëŠ”ì§€ í™•ì¸
+    /// </summary>
+    public bool HasTaunt()
+    {
+        CardDisplay[] cards = GetComponentsInChildren<CardDisplay>();
+        foreach (var card in cards)
+        {
+            if (card.HasKeyword(Keyword.Taunt))
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// ì€ì‹ ì´ ì•„ë‹Œ ì¹´ë“œë§Œ ë°˜í™˜ (íƒ€ê²ŸíŒ…ìš©)
+    /// </summary>
+    public CardDisplay[] GetTargetableCards()
+    {
+        var cards = GetComponentsInChildren<CardDisplay>();
+        return System.Array.FindAll(cards, c => !c.isStealthed && !c.HasKeyword(Keyword.Immune));
     }
 }

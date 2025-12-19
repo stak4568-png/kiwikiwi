@@ -10,20 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 979f7d4d3951dc842afe773d7046b6ed, type: 3}
-  m_Name: Succubus
+  m_Name: NewMonster
   m_EditorClassIdentifier: Assembly-CSharp::MonsterCardData
-  id: succubus
-  cardName: "\uC11C\uD050\uBC84\uC2A4"
+  id: 
+  cardName: 
   cardType: 0
   element: 0
-  manaCost: 1
-  originalArt: {fileID: 2911245892513236901, guid: dfab697e73726eb4585e525ad9eec76f, type: 3}
-  censoredArt: {fileID: 6074641314603879984, guid: e95b187402288e046b22313150a5683d, type: 3}
-  description: "\uC548\uB155\uD558\uC138\uC694"
-  censoredDescription: "\uBC18\uAC11\uC2B5\uB2C8\uB2E4"
-  attack: 1
-  health: 1
-  lustAttack: 1
-  keywords: 05000000
+  manaCost: 0
+  originalArt: {fileID: 0}
+  censoredArt: {fileID: 0}
+  description: 
+  censoredDescription: 
+  attack: 0
+  health: 0
+  lustAttack: 0
+  keywords: 00000000
   effects:
   - {fileID: 0}

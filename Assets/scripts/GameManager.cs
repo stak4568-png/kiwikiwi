@@ -1,3 +1,6 @@
+// GameManager.cs
+// ê²Œì„ ìƒíƒœ ê´€ë¦¬ - íš¨ê³¼ ì‹œìŠ¤í…œ í†µí•© ë²„ì „
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -8,22 +11,22 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
 
-    [Header("ÀÚ¿ø °ü¸® (¸¶³ª/ÁıÁß·Â)")]
+    [Header("ìì› ê´€ë¦¬ (ë§ˆë‚˜/ì§‘ì¤‘ë ¥)")]
     public int maxMana = 1;
     public int currentMana = 1;
     public int maxFocus = 1;
     public int currentFocus = 1;
 
-    [Header("ÇÃ·¹ÀÌ¾î »óÅÂ (HP/Lust)")]
+    [Header("í”Œë ˆì´ì–´ ìƒíƒœ (HP/Lust)")]
     public int playerHealth = 30;
     public int playerLust = 0;
     public int turnCount = 1;
     public bool isEnemyTurn = false;
 
-    [Header("Àû ¿µ¿õ »óÅÂ")]
+    [Header("ì  ì˜ì›… ìƒíƒœ")]
     public int enemyHealth = 30;
 
-    [Header("UI ¿¬°á (ÅØ½ºÆ®)")]
+    [Header("UI ì—°ê²° (í…ìŠ¤íŠ¸)")]
     public TMP_Text manaText;
     public TMP_Text focusText;
     public TMP_Text healthText;
@@ -31,21 +34,24 @@ public class GameManager : MonoBehaviour
     public TMP_Text enemyHealthText;
     public TMP_Text turnText;
 
-    [Header("UI ¿¬°á (¸¶³ª ¾ÆÀÌÄÜ)")]
-    public GameObject manaIconPrefab;    // ¸¶³ª º¸¼® ÇÁ¸®ÆÕ
-    public Transform manaContainer;      // º¸¼®ÀÌ ´ã±æ °÷ (Horizontal Layout Group ÇÊ¿ä)
-    private List<Image> manaIcons = new List<Image>(); // º¸¼® ³» 'FullIcon' ÀÌ¹ÌÁöµé
+    [Header("UI ì—°ê²° (ë§ˆë‚˜ ì•„ì´ì½˜)")]
+    public GameObject manaIconPrefab;
+    public Transform manaContainer;
+    private List<Image> manaIcons = new List<Image>();
+
+    [Header("Zone References")]
+    public Transform playerField;
+    public Transform enemyField;
 
     void Awake()
     {
-        // ½Ì±ÛÅæ ¼³Á¤
         if (instance == null) instance = this;
         else Destroy(gameObject);
     }
 
     void Start()
     {
-        // 1. 10°³ÀÇ ¸¶³ª ¾ÆÀÌÄÜ ¹Ì¸® »ı¼º (¿ÀºêÁ§Æ® Ç®¸µ)
+        // ë§ˆë‚˜ ì•„ì´ì½˜ ì´ˆê¸°í™”
         if (manaIconPrefab != null && manaContainer != null)
         {
             for (int i = 0; i < 10; i++)
@@ -59,10 +65,18 @@ public class GameManager : MonoBehaviour
                 icon.SetActive(false);
             }
         }
+
+        // Zone ì°¸ì¡° ìë™ ì°¾ê¸°
+        if (playerField == null)
+            playerField = GameObject.Find("PlayerArea")?.transform;
+        if (enemyField == null)
+            enemyField = GameObject.Find("EnemyArea")?.transform;
+
         UpdateUI();
     }
 
-    // ¸¶³ª »ç¿ë ½Ãµµ
+    // === ìì› ê´€ë¦¬ ===
+
     public bool TrySpendMana(int amount)
     {
         if (currentMana >= amount)
@@ -74,7 +88,6 @@ public class GameManager : MonoBehaviour
         return false;
     }
 
-    // ÁıÁß·Â »ç¿ë ½Ãµµ
     public bool TryUseFocus()
     {
         if (currentFocus > 0)
@@ -86,100 +99,257 @@ public class GameManager : MonoBehaviour
         return false;
     }
 
-    // ÇÃ·¹ÀÌ¾î À¯È¤ µ¥¹ÌÁö Ã³¸® (¸¶³ª ¹æ¾î Æ÷ÇÔ)
+    public void GainMana(int amount)
+    {
+        currentMana = Mathf.Min(currentMana + amount, maxMana);
+        UpdateUI();
+    }
+
+    public void GainFocus(int amount)
+    {
+        currentFocus += amount;
+        UpdateUI();
+    }
+
+    // === ë°ë¯¸ì§€ ì²˜ë¦¬ ===
+
     public void TakeLustDamage(int monsterLustAtk)
     {
-        // [±âÈ¹ 5-A] ¹Ş´Â ÈïºĞµµ = Àû À¯È¤ °ø°İ·Â - ³» ³²Àº ¸¶³ª
         int finalDamage = Mathf.Max(0, monsterLustAtk - currentMana);
         playerLust += finalDamage;
 
         if (playerLust >= 100)
         {
             playerLust = 100;
-            Debug.Log("¡Ú CLIMAX! ÈïºĞµµ°¡ ÃÖ´ëÄ¡ÀÔ´Ï´Ù.");
+            Debug.Log("â˜… CLIMAX! í¥ë¶„ë„ê°€ ìµœëŒ€ì¹˜ì…ë‹ˆë‹¤.");
+            OnClimax();
         }
         UpdateUI();
     }
 
-    // Àû ¿µ¿õ¿¡°Ô µ¥¹ÌÁö ÀÔÈ÷±â
+    public void TakePlayerDamage(int amount)
+    {
+        playerHealth -= amount;
+        Debug.Log($"í”Œë ˆì´ì–´ê°€ {amount}ì˜ í”¼í•´ë¥¼ ì…ìŒ! ë‚¨ì€ HP: {playerHealth}");
+        
+        if (playerHealth <= 0)
+        {
+            playerHealth = 0;
+            OnPlayerDefeat();
+        }
+        UpdateUI();
+    }
+
+    public void HealPlayer(int amount)
+    {
+        playerHealth += amount;
+        Debug.Log($"í”Œë ˆì´ì–´ ì²´ë ¥ {amount} íšŒë³µ! í˜„ì¬: {playerHealth}");
+        UpdateUI();
+    }
+
     public void DamageEnemyHero(int amount)
     {
         enemyHealth -= amount;
-        Debug.Log($"Àû ¿µ¿õ¿¡°Ô {amount}ÀÇ ÇÇÇØ! ³²Àº HP: {enemyHealth}");
+        Debug.Log($"ì  ì˜ì›…ì—ê²Œ {amount}ì˜ í”¼í•´! ë‚¨ì€ HP: {enemyHealth}");
+        
         if (enemyHealth <= 0)
         {
             enemyHealth = 0;
-            Debug.Log("½Â¸®! Àû ¿µ¿õÀ» °İÆÄÇß½À´Ï´Ù.");
+            OnEnemyDefeat();
         }
         UpdateUI();
     }
 
-    // ÅÏ Á¾·á ¹öÆ° ´©¸¦ ¶§ È£Ãâ
+    // === ê²Œì„ ì¢…ë£Œ ì²˜ë¦¬ ===
+
+    void OnClimax()
+    {
+        // TODO: í´ë¼ì´ë§‰ìŠ¤ ì—°ì¶œ, ê²Œì„ ì˜¤ë²„ ì²˜ë¦¬
+        Debug.Log("â˜…â˜…â˜… CLIMAX - íŠ¹ìˆ˜ ì´ë²¤íŠ¸ ë°œë™! â˜…â˜…â˜…");
+    }
+
+    void OnPlayerDefeat()
+    {
+        Debug.Log("íŒ¨ë°°...");
+        // TODO: ê²Œì„ ì˜¤ë²„ í™”ë©´
+    }
+
+    void OnEnemyDefeat()
+    {
+        Debug.Log("ìŠ¹ë¦¬! ì  ì˜ì›…ì„ ê²©íŒŒí–ˆìŠµë‹ˆë‹¤.");
+        // TODO: ìŠ¹ë¦¬ í™”ë©´
+    }
+
+    // === í„´ ê´€ë¦¬ ===
+
     public void EndTurn()
     {
         if (isEnemyTurn) return;
+
+        // í”Œë ˆì´ì–´ í„´ ì¢…ë£Œ íš¨ê³¼ ë°œë™
+        TriggerTurnEndEffects();
+
         StartCoroutine(EnemyPhase());
     }
 
-    // ÀûÀÇ °ø°İ ÆäÀÌÁî ÄÚ·çÆ¾
+    void TriggerTurnEndEffects()
+    {
+        if (EffectManager.instance != null)
+        {
+            EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnTurnEnd, ZoneType.PlayerField);
+        }
+    }
+
     IEnumerator EnemyPhase()
     {
         isEnemyTurn = true;
-        Debug.Log("Àû °ø°İ ÆäÀÌÁî ½ÃÀÛ...");
+        Debug.Log("â”€â”€ ì  í„´ ì‹œì‘ â”€â”€");
 
-        GameObject enemyArea = GameObject.Find("EnemyArea");
-        GameObject playerArea = GameObject.Find("PlayerArea");
-
-        if (enemyArea != null && playerArea != null)
+        // ì  í„´ ì‹œì‘ íš¨ê³¼
+        if (EffectManager.instance != null)
         {
-            CardDisplay[] enemies = enemyArea.GetComponentsInChildren<CardDisplay>();
-            bool isPlayerEmpty = playerArea.transform.childCount == 0;
+            EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnEnemyTurnStart, ZoneType.EnemyField);
+        }
 
+        yield return new WaitForSeconds(0.5f);
+
+        // ì  í•„ë“œì˜ ëª¨ë“  ì¹´ë“œê°€ ê³µê²©
+        if (enemyField != null)
+        {
+            CardDisplay[] enemies = enemyField.GetComponentsInChildren<CardDisplay>();
+            
             foreach (CardDisplay enemy in enemies)
             {
                 if (enemy.cardData is MonsterCardData monster)
                 {
                     yield return new WaitForSeconds(0.8f);
-
-                    if (isPlayerEmpty)
-                    {
-                        // ÇÊµå°¡ ºñ¾úÀ» ¶§¸¸ À¯È¤ °ø°İ
-                        TakeLustDamage(monster.lustAttack);
-                    }
-                    else
-                    {
-                        // ÇÊµå¿¡ ¸ó½ºÅÍ°¡ ÀÖÀ¸¸é (ÀÚµ¿À¸·Î ¶§¸®´Â ·ÎÁ÷Àº ¾ÆÁ÷ ¹Ì±¸Çö)
-                        Debug.Log($"{monster.cardName}ÀÌ(°¡) ³» ÇÊµå¸¦ ³ë·Áº¾´Ï´Ù.");
-                    }
+                    ExecuteEnemyAttack(enemy, monster);
                 }
             }
         }
 
-        yield return new WaitForSeconds(1f);
+        // ì  í„´ ì¢…ë£Œ íš¨ê³¼
+        if (EffectManager.instance != null)
+        {
+            EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnEnemyTurnEnd, ZoneType.EnemyField);
+        }
+
+        yield return new WaitForSeconds(0.5f);
         StartNewPlayerTurn();
     }
 
-    // »õ ÅÏ ½ÃÀÛ ÃÊ±âÈ­
+    void ExecuteEnemyAttack(CardDisplay enemy, MonsterCardData monster)
+    {
+        // í”Œë ˆì´ì–´ í•„ë“œì— ë„ë°œ ì¹´ë“œê°€ ìˆëŠ”ì§€ í™•ì¸
+        CardDisplay tauntTarget = FindTauntTarget();
+        
+        if (tauntTarget != null)
+        {
+            // ë„ë°œ ì¹´ë“œ ê³µê²©
+            Debug.Log($"{monster.cardName}ì´(ê°€) ë„ë°œ ì¹´ë“œ {tauntTarget.cardData.cardName}ì„(ë¥¼) ê³µê²©!");
+            ExecuteCombat(enemy, tauntTarget);
+        }
+        else if (playerField != null && playerField.childCount > 0)
+        {
+            // ì•„ë¬´ ì¹´ë“œë‚˜ ê³µê²© (AI ê°œì„  ê°€ëŠ¥)
+            CardDisplay target = playerField.GetChild(0).GetComponent<CardDisplay>();
+            if (target != null)
+            {
+                Debug.Log($"{monster.cardName}ì´(ê°€) {target.cardData.cardName}ì„(ë¥¼) ê³µê²©!");
+                ExecuteCombat(enemy, target);
+            }
+        }
+        else
+        {
+            // í•„ë“œê°€ ë¹„ì—ˆìœ¼ë©´ ìœ í˜¹ ê³µê²©
+            TakeLustDamage(monster.lustAttack);
+            Debug.Log($"{monster.cardName}ì˜ ìœ í˜¹ ê³µê²©! í¥ë¶„ë„ +{monster.lustAttack}");
+        }
+    }
+
+    CardDisplay FindTauntTarget()
+    {
+        if (playerField == null) return null;
+
+        CardDisplay[] allies = playerField.GetComponentsInChildren<CardDisplay>();
+        foreach (var card in allies)
+        {
+            if (card.HasKeyword(Keyword.Taunt))
+                return card;
+        }
+        return null;
+    }
+
+    void ExecuteCombat(CardDisplay attacker, CardDisplay defender)
+    {
+        // ê³µê²© íš¨ê³¼ ë°œë™
+        attacker.OnAttack(defender);
+
+        // ìƒí˜¸ ë°ë¯¸ì§€
+        defender.TakeDamage(attacker.currentAttack);
+        attacker.TakeDamage(defender.currentAttack);
+
+        // ìƒëª…ë ¥ í¡ìˆ˜ ì²´í¬
+        if (attacker.HasKeyword(Keyword.Lifesteal))
+        {
+            HealPlayer(attacker.currentAttack);
+            Debug.Log($"{attacker.cardData.cardName}ì˜ ìƒëª…ë ¥ í¡ìˆ˜ë¡œ {attacker.currentAttack} íšŒë³µ!");
+        }
+
+        // ë… ì²´í¬
+        if (attacker.HasKeyword(Keyword.Poison) && defender.currentHealth > 0)
+        {
+            Debug.Log($"{attacker.cardData.cardName}ì˜ ë…ìœ¼ë¡œ {defender.cardData.cardName} íŒŒê´´!");
+            defender.TakeDamage(9999); // ì¦‰ì‚¬
+        }
+        if (defender.HasKeyword(Keyword.Poison) && attacker.currentHealth > 0)
+        {
+            Debug.Log($"{defender.cardData.cardName}ì˜ ë…ìœ¼ë¡œ {attacker.cardData.cardName} íŒŒê´´!");
+            attacker.TakeDamage(9999);
+        }
+    }
+
     void StartNewPlayerTurn()
     {
         isEnemyTurn = false;
         turnCount++;
+
+        // ë§ˆë‚˜/ì§‘ì¤‘ë ¥ íšŒë³µ
         if (maxMana < 10) maxMana++;
         currentMana = maxMana;
         currentFocus = maxFocus;
 
-        // ¡Ú ¸Å ÅÏ ½ÃÀÛ ½Ã Ä«µå ÇÑ Àå µå·Î¿ì! ¡Ú
+        Debug.Log($"â”€â”€ í”Œë ˆì´ì–´ í„´ {turnCount} ì‹œì‘ â”€â”€");
+
+        // ì¹´ë“œ ë“œë¡œìš°
         if (DeckManager.instance != null)
         {
             DeckManager.instance.DrawCard();
         }
 
+        // í”Œë ˆì´ì–´ í•„ë“œ ì¹´ë“œë“¤ í„´ ì‹œì‘ ì²˜ë¦¬
+        if (playerField != null)
+        {
+            CardDisplay[] allies = playerField.GetComponentsInChildren<CardDisplay>();
+            foreach (var card in allies)
+            {
+                card.OnTurnStart();
+            }
+        }
+
+        // í„´ ì‹œì‘ íš¨ê³¼ ë°œë™
+        if (EffectManager.instance != null)
+        {
+            EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnTurnStart, ZoneType.PlayerField);
+        }
+
         UpdateUI();
     }
-    // ¡Ú ¸ğµç UI ¿ä¼Ò¸¦ ÇÑ ¹ø¿¡ ¾÷µ¥ÀÌÆ®ÇÏ´Â ´Ü ÇÏ³ªÀÇ ÇÔ¼ö ¡Ú
+
+    // === UI ì—…ë°ì´íŠ¸ ===
+
     public void UpdateUI()
     {
-        // ÅØ½ºÆ® ¾÷µ¥ÀÌÆ®
         if (manaText != null) manaText.text = $"{currentMana} / {maxMana}";
         if (focusText != null) focusText.text = $"Focus: {currentFocus} / {maxFocus}";
         if (healthText != null) healthText.text = $"HP: {playerHealth}";
@@ -187,13 +357,12 @@ public class GameManager : MonoBehaviour
         if (enemyHealthText != null) enemyHealthText.text = $"Enemy HP: {enemyHealth}";
         if (turnText != null) turnText.text = $"Turn {turnCount}";
 
-        // ¸¶³ª ¾ÆÀÌÄÜ º¸¼® ¾÷µ¥ÀÌÆ®
+        // ë§ˆë‚˜ ì•„ì´ì½˜ ì—…ë°ì´íŠ¸
         for (int i = 0; i < manaIcons.Count; i++)
         {
             if (i < maxMana)
             {
                 manaIcons[i].transform.parent.gameObject.SetActive(true);
-                // ¸¶³ª°¡ ³²¾ÆÀÖÀ¸¸é º¸¼® »öÀ» ÄÑ°í(FullIcon), ¾øÀ¸¸é ²û
                 manaIcons[i].enabled = (i < currentMana);
             }
             else
@@ -201,5 +370,27 @@ public class GameManager : MonoBehaviour
                 manaIcons[i].transform.parent.gameObject.SetActive(false);
             }
         }
+    }
+
+    // === ìœ í‹¸ë¦¬í‹° ===
+
+    /// <summary>
+    /// íŠ¹ì • ì¡´ì˜ ëª¨ë“  ì¹´ë“œ ê°€ì ¸ì˜¤ê¸°
+    /// </summary>
+    public List<CardDisplay> GetCardsInZone(ZoneType zone)
+    {
+        List<CardDisplay> cards = new List<CardDisplay>();
+        Transform targetZone = zone switch
+        {
+            ZoneType.PlayerField => playerField,
+            ZoneType.EnemyField => enemyField,
+            _ => null
+        };
+
+        if (targetZone != null)
+        {
+            cards.AddRange(targetZone.GetComponentsInChildren<CardDisplay>());
+        }
+        return cards;
     }
 }
