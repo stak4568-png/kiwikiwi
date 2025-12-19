@@ -1,6 +1,3 @@
-// GameManager.cs
-// 게임 상태 관리 - 효과 시스템 통합 버전
-
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -51,7 +48,7 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        // 마나 아이콘 초기화
+        // 마나 아이콘 초기화 (최대 10개 기준)
         if (manaIconPrefab != null && manaContainer != null)
         {
             for (int i = 0; i < 10; i++)
@@ -66,16 +63,14 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // Zone 참조 자동 찾기
-        if (playerField == null)
-            playerField = GameObject.Find("PlayerArea")?.transform;
-        if (enemyField == null)
-            enemyField = GameObject.Find("EnemyArea")?.transform;
+        // Zone 참조 자동 찾기 (씬에 해당 이름의 오브젝트가 있어야 함)
+        if (playerField == null) playerField = GameObject.Find("PlayerArea")?.transform;
+        if (enemyField == null) enemyField = GameObject.Find("EnemyArea")?.transform;
 
         UpdateUI();
     }
 
-    // === 자원 관리 ===
+    // === 자원 관리 함수 ===
 
     public bool TrySpendMana(int amount)
     {
@@ -111,17 +106,28 @@ public class GameManager : MonoBehaviour
         UpdateUI();
     }
 
-    // === 데미지 처리 ===
+    // === 데미지 및 흥분도 처리 ===
 
+    /// <summary>
+    /// 일반적인 유혹 공격 데미지 (현재 마나 수치만큼 방어)
+    /// </summary>
     public void TakeLustDamage(int monsterLustAtk)
     {
         int finalDamage = Mathf.Max(0, monsterLustAtk - currentMana);
-        playerLust += finalDamage;
+        AddLustDirectly(finalDamage);
+    }
+
+    /// <summary>
+    /// 흥분도를 직접 증가 (방어 무시 혹은 계산 완료된 데미지)
+    /// </summary>
+    public void AddLustDirectly(int amount)
+    {
+        playerLust += amount;
+        Debug.Log($"흥분도 증가: +{amount} (현재: {playerLust})");
 
         if (playerLust >= 100)
         {
             playerLust = 100;
-            Debug.Log("★ CLIMAX! 흥분도가 최대치입니다.");
             OnClimax();
         }
         UpdateUI();
@@ -130,8 +136,6 @@ public class GameManager : MonoBehaviour
     public void TakePlayerDamage(int amount)
     {
         playerHealth -= amount;
-        Debug.Log($"플레이어가 {amount}의 피해를 입음! 남은 HP: {playerHealth}");
-        
         if (playerHealth <= 0)
         {
             playerHealth = 0;
@@ -143,15 +147,12 @@ public class GameManager : MonoBehaviour
     public void HealPlayer(int amount)
     {
         playerHealth += amount;
-        Debug.Log($"플레이어 체력 {amount} 회복! 현재: {playerHealth}");
         UpdateUI();
     }
 
     public void DamageEnemyHero(int amount)
     {
         enemyHealth -= amount;
-        Debug.Log($"적 영웅에게 {amount}의 피해! 남은 HP: {enemyHealth}");
-        
         if (enemyHealth <= 0)
         {
             enemyHealth = 0;
@@ -160,44 +161,35 @@ public class GameManager : MonoBehaviour
         UpdateUI();
     }
 
-    // === 게임 종료 처리 ===
+    // === 게임 결과 처리 ===
 
     void OnClimax()
     {
-        // TODO: 클라이막스 연출, 게임 오버 처리
-        Debug.Log("★★★ CLIMAX - 특수 이벤트 발동! ★★★");
+        Debug.Log("<color=magenta>★★★ CLIMAX 이벤트 발생! ★★★</color>");
+        // TODO: 클라이막스 컷신이나 특수 연출 연결
     }
 
     void OnPlayerDefeat()
     {
-        Debug.Log("패배...");
-        // TODO: 게임 오버 화면
+        Debug.Log("플레이어 패배...");
     }
 
     void OnEnemyDefeat()
     {
-        Debug.Log("승리! 적 영웅을 격파했습니다.");
-        // TODO: 승리 화면
+        Debug.Log("플레이어 승리!");
     }
 
-    // === 턴 관리 ===
+    // === 턴 관리 및 적 AI ===
 
     public void EndTurn()
     {
         if (isEnemyTurn) return;
 
-        // 플레이어 턴 종료 효과 발동
-        TriggerTurnEndEffects();
+        // 플레이어 턴 종료 시 효과 발동
+        if (EffectManager.instance != null)
+            EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnTurnEnd, ZoneType.PlayerField);
 
         StartCoroutine(EnemyPhase());
-    }
-
-    void TriggerTurnEndEffects()
-    {
-        if (EffectManager.instance != null)
-        {
-            EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnTurnEnd, ZoneType.PlayerField);
-        }
     }
 
     IEnumerator EnemyPhase()
@@ -205,34 +197,48 @@ public class GameManager : MonoBehaviour
         isEnemyTurn = true;
         Debug.Log("── 적 턴 시작 ──");
 
-        // 적 턴 시작 효과
+        // 적 턴 시작 효과 발동
         if (EffectManager.instance != null)
-        {
             EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnEnemyTurnStart, ZoneType.EnemyField);
-        }
 
         yield return new WaitForSeconds(0.5f);
 
-        // 적 필드의 모든 카드가 공격
         if (enemyField != null)
         {
             CardDisplay[] enemies = enemyField.GetComponentsInChildren<CardDisplay>();
-            
+
             foreach (CardDisplay enemy in enemies)
             {
                 if (enemy.cardData is MonsterCardData monster)
                 {
-                    yield return new WaitForSeconds(0.8f);
-                    ExecuteEnemyAttack(enemy, monster);
+                    // [핵심] 플레이어 필드에 하수인이 없으면 유혹 공격 이벤트 발생
+                    bool isSeduceAttack = (playerField.childCount == 0);
+
+                    if (isSeduceAttack)
+                    {
+                        bool eventDone = false;
+                        if (SeduceEventManager.instance != null)
+                        {
+                            SeduceEventManager.instance.StartSeduceEvent(enemy, () => {
+                                eventDone = true;
+                            });
+                            // 플레이어가 선택을 마칠 때까지 대기
+                            yield return new WaitUntil(() => eventDone);
+                        }
+                    }
+                    else
+                    {
+                        // 필드에 하수인이 있으면 일반 공격 (도발 체크 포함)
+                        yield return new WaitForSeconds(0.8f);
+                        ExecuteEnemyAttack(enemy, monster);
+                    }
                 }
             }
         }
 
-        // 적 턴 종료 효과
+        // 적 턴 종료 효과 발동
         if (EffectManager.instance != null)
-        {
             EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnEnemyTurnEnd, ZoneType.EnemyField);
-        }
 
         yield return new WaitForSeconds(0.5f);
         StartNewPlayerTurn();
@@ -240,73 +246,39 @@ public class GameManager : MonoBehaviour
 
     void ExecuteEnemyAttack(CardDisplay enemy, MonsterCardData monster)
     {
-        // 플레이어 필드에 도발 카드가 있는지 확인
-        CardDisplay tauntTarget = FindTauntTarget();
-        
-        if (tauntTarget != null)
+        // 도발 카드 먼저 찾기
+        CardDisplay target = FindTauntTarget();
+
+        // 도발 없으면 필드 위 랜덤 하수인 공격
+        if (target == null && playerField.childCount > 0)
         {
-            // 도발 카드 공격
-            Debug.Log($"{monster.cardName}이(가) 도발 카드 {tauntTarget.cardData.cardName}을(를) 공격!");
-            ExecuteCombat(enemy, tauntTarget);
+            int randomIndex = Random.Range(0, playerField.childCount);
+            target = playerField.GetChild(randomIndex).GetComponent<CardDisplay>();
         }
-        else if (playerField != null && playerField.childCount > 0)
+
+        if (target != null)
         {
-            // 아무 카드나 공격 (AI 개선 가능)
-            CardDisplay target = playerField.GetChild(0).GetComponent<CardDisplay>();
-            if (target != null)
-            {
-                Debug.Log($"{monster.cardName}이(가) {target.cardData.cardName}을(를) 공격!");
-                ExecuteCombat(enemy, target);
-            }
-        }
-        else
-        {
-            // 필드가 비었으면 유혹 공격
-            TakeLustDamage(monster.lustAttack);
-            Debug.Log($"{monster.cardName}의 유혹 공격! 흥분도 +{monster.lustAttack}");
+            Debug.Log($"{monster.cardName}이(가) {target.cardData.cardName}을(를) 공격!");
+            ExecuteCombat(enemy, target);
         }
     }
 
     CardDisplay FindTauntTarget()
     {
         if (playerField == null) return null;
-
         CardDisplay[] allies = playerField.GetComponentsInChildren<CardDisplay>();
         foreach (var card in allies)
         {
-            if (card.HasKeyword(Keyword.Taunt))
-                return card;
+            if (card.HasKeyword(Keyword.Taunt)) return card;
         }
         return null;
     }
 
     void ExecuteCombat(CardDisplay attacker, CardDisplay defender)
     {
-        // 공격 효과 발동
         attacker.OnAttack(defender);
-
-        // 상호 데미지
         defender.TakeDamage(attacker.currentAttack);
         attacker.TakeDamage(defender.currentAttack);
-
-        // 생명력 흡수 체크
-        if (attacker.HasKeyword(Keyword.Lifesteal))
-        {
-            HealPlayer(attacker.currentAttack);
-            Debug.Log($"{attacker.cardData.cardName}의 생명력 흡수로 {attacker.currentAttack} 회복!");
-        }
-
-        // 독 체크
-        if (attacker.HasKeyword(Keyword.Poison) && defender.currentHealth > 0)
-        {
-            Debug.Log($"{attacker.cardData.cardName}의 독으로 {defender.cardData.cardName} 파괴!");
-            defender.TakeDamage(9999); // 즉사
-        }
-        if (defender.HasKeyword(Keyword.Poison) && attacker.currentHealth > 0)
-        {
-            Debug.Log($"{defender.cardData.cardName}의 독으로 {attacker.cardData.cardName} 파괴!");
-            attacker.TakeDamage(9999);
-        }
     }
 
     void StartNewPlayerTurn()
@@ -314,7 +286,7 @@ public class GameManager : MonoBehaviour
         isEnemyTurn = false;
         turnCount++;
 
-        // 마나/집중력 회복
+        // 마나 및 집중력 회복
         if (maxMana < 10) maxMana++;
         currentMana = maxMana;
         currentFocus = maxFocus;
@@ -322,26 +294,18 @@ public class GameManager : MonoBehaviour
         Debug.Log($"── 플레이어 턴 {turnCount} 시작 ──");
 
         // 카드 드로우
-        if (DeckManager.instance != null)
-        {
-            DeckManager.instance.DrawCard();
-        }
+        if (DeckManager.instance != null) DeckManager.instance.DrawCard();
 
-        // 플레이어 필드 카드들 턴 시작 처리
+        // 아군 카드들 상태 갱신
         if (playerField != null)
         {
-            CardDisplay[] allies = playerField.GetComponentsInChildren<CardDisplay>();
-            foreach (var card in allies)
-            {
+            foreach (CardDisplay card in playerField.GetComponentsInChildren<CardDisplay>())
                 card.OnTurnStart();
-            }
         }
 
-        // 턴 시작 효과 발동
+        // 플레이어 턴 시작 효과 발동
         if (EffectManager.instance != null)
-        {
             EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnTurnStart, ZoneType.PlayerField);
-        }
 
         UpdateUI();
     }
@@ -357,7 +321,7 @@ public class GameManager : MonoBehaviour
         if (enemyHealthText != null) enemyHealthText.text = $"Enemy HP: {enemyHealth}";
         if (turnText != null) turnText.text = $"Turn {turnCount}";
 
-        // 마나 아이콘 업데이트
+        // 마나 구슬 UI 업데이트
         for (int i = 0; i < manaIcons.Count; i++)
         {
             if (i < maxMana)
@@ -372,25 +336,11 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // === 유틸리티 ===
-
-    /// <summary>
-    /// 특정 존의 모든 카드 가져오기
-    /// </summary>
     public List<CardDisplay> GetCardsInZone(ZoneType zone)
     {
         List<CardDisplay> cards = new List<CardDisplay>();
-        Transform targetZone = zone switch
-        {
-            ZoneType.PlayerField => playerField,
-            ZoneType.EnemyField => enemyField,
-            _ => null
-        };
-
-        if (targetZone != null)
-        {
-            cards.AddRange(targetZone.GetComponentsInChildren<CardDisplay>());
-        }
+        Transform targetZone = (zone == ZoneType.PlayerField) ? playerField : enemyField;
+        if (targetZone != null) cards.AddRange(targetZone.GetComponentsInChildren<CardDisplay>());
         return cards;
     }
 }
