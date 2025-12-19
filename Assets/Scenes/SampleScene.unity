@@ -156,6 +156,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+--- !u!114 &283218609 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1898140736618703349, guid: c91f2b0128a038f47acdbeca119020d6, type: 3}
+  m_PrefabInstance: {fileID: 1463431790}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!114 &313257648 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7990145080509639515, guid: c58b1b2aa8839c44185f9cf30d1de0e1, type: 3}
@@ -1727,7 +1738,7 @@ PrefabInstance:
     - target: {fileID: 228763079460451908, guid: bd0c1b0492738824791ca16b542b703c, type: 3}
       propertyPath: nameText
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 283218609}
     - target: {fileID: 228763079460451908, guid: bd0c1b0492738824791ca16b542b703c, type: 3}
       propertyPath: statsText
       value: 
