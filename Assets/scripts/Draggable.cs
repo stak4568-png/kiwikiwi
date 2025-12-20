@@ -10,6 +10,9 @@ public class Draggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
     private CanvasGroup canvasGroup;
     private CardDisplay cardDisplay;
 
+    // 최적화: 리스트 재사용 (GC 감소)
+    private static readonly List<RaycastResult> _raycastResults = new List<RaycastResult>();
+
     void Awake()
     {
         canvasGroup = GetComponent<CanvasGroup>();
@@ -88,11 +91,11 @@ public class Draggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
     {
         if (cardDisplay == null || !cardDisplay.CanAttackNow()) return;
 
-        // 마우스 아래의 모든 UI 검사
-        List<RaycastResult> results = new List<RaycastResult>();
-        EventSystem.current.RaycastAll(eventData, results);
+        // 마우스 아래의 모든 UI 검사 (최적화: 리스트 재사용)
+        _raycastResults.Clear();
+        EventSystem.current.RaycastAll(eventData, _raycastResults);
 
-        foreach (RaycastResult result in results)
+        foreach (RaycastResult result in _raycastResults)
         {
             // 1. 적 영웅 타겟팅
             HeroPortrait targetHero = result.gameObject.GetComponentInParent<HeroPortrait>();

@@ -43,7 +43,30 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
 
     private Vector3 originalScale;
 
+    // 최적화: 캐싱
+    private DropZone _cachedDropZone;
+    private bool _dropZoneCached = false;
+    private bool _lastIsOnBoard = false;
+
     void Awake() { originalScale = transform.localScale; }
+
+    // 최적화: 부모가 변경되면 캐시 무효화 및 도발 재등록
+    void OnTransformParentChanged()
+    {
+        // 이전 구역에서 도발 해제
+        if (_cachedDropZone != null)
+            _cachedDropZone.UnregisterTaunt(this);
+
+        _dropZoneCached = false;
+
+        // 새 구역에 도발 등록
+        DropZone newZone = GetComponentInParent<DropZone>();
+        if (newZone != null && data != null && data.HasKeyword(Keyword.Taunt))
+            newZone.RegisterTaunt(this);
+
+        _cachedDropZone = newZone;
+        _dropZoneCached = true;
+    }
 
     public void Init(CardData cardData, bool ownedByPlayer)
     {
@@ -71,9 +94,14 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
     {
         if (data == null) return;
 
-        // 1. 구역 확인
-        DropZone currentZone = GetComponentInParent<DropZone>();
-        bool isOnBoard = (currentZone != null && (currentZone.zoneType == ZoneType.PlayerField || currentZone.zoneType == ZoneType.EnemyField));
+        // 1. 구역 확인 (최적화: 캐싱)
+        if (!_dropZoneCached || transform.hasChanged)
+        {
+            _cachedDropZone = GetComponentInParent<DropZone>();
+            _dropZoneCached = true;
+            transform.hasChanged = false;
+        }
+        bool isOnBoard = (_cachedDropZone != null && (_cachedDropZone.zoneType == ZoneType.PlayerField || _cachedDropZone.zoneType == ZoneType.EnemyField));
 
         // 2. 비주얼 전환
         if (handVisual != null) handVisual.SetActive(!isOnBoard);
@@ -162,6 +190,10 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
         // ★ [추가] 죽음 시 발동하는 효과 트리거
         if (EffectManager.instance != null)
             EffectManager.instance.TriggerEffects(this, EffectTiming.OnDeath);
+
+        // 최적화: 도발 해제
+        if (_cachedDropZone != null)
+            _cachedDropZone.UnregisterTaunt(this);
 
         Destroy(gameObject);
     }
