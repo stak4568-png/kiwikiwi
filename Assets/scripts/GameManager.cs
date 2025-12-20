@@ -215,15 +215,13 @@ public class GameManager : MonoBehaviour
 
         yield return new WaitForSeconds(0.5f);
 
-        // [적 영웅 유혹 공격] 플레이어 필드가 비어있으면 적 영웅이 직접 유혹 공격
-        if (playerField.childCount == 0 && enemyHeroPortrait != null)
+        // [적 영웅 유혹 공격] 필드 상황과 관계없이 매 턴 유혹 공격 가능
+        if (enemyHeroPortrait != null && enemyHeroPortrait.heroData != null
+            && enemyHeroPortrait.heroData.canSeduceAttack)
         {
-            if (enemyHeroPortrait.heroData != null && enemyHeroPortrait.heroData.canSeduceAttack)
-            {
-                yield return new WaitForSeconds(0.5f);
-                enemyHeroPortrait.ExecuteSeduceAttack();
-                yield return new WaitForSeconds(0.5f);
-            }
+            yield return new WaitForSeconds(0.5f);
+            enemyHeroPortrait.ExecuteSeduceAttack();
+            yield return new WaitForSeconds(0.5f);
         }
 
         if (enemyField != null)
