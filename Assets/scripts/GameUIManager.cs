@@ -606,8 +606,25 @@ public class GameUIManager : MonoBehaviour
             descriptionText.text = _currentTemptation.forcedDialogue;
         }
 
-        // 버튼 비활성화
-        if (temptRejectButton != null) temptRejectButton.interactable = false;
+        // 거절 버튼 숨기기 (수락만 가능)
+        if (temptRejectButton != null) temptRejectButton.gameObject.SetActive(false);
+
+        // 수락 버튼 텍스트 변경
+        if (temptAcceptText != null) temptAcceptText.text = "받아들인다...";
+
+        // 수락 버튼 클릭 시 강제 유혹 처리
+        if (temptAcceptButton != null)
+        {
+            temptAcceptButton.onClick.RemoveAllListeners();
+            temptAcceptButton.onClick.AddListener(OnForcedTemptationAccept);
+        }
+
+        UpdateRejectCountUI();
+    }
+
+    void OnForcedTemptationAccept()
+    {
+        if (_currentTemptation == null) return;
 
         // 강제 Lust 증가
         if (HeroPortrait.playerHero != null)
@@ -615,10 +632,11 @@ public class GameUIManager : MonoBehaviour
             HeroPortrait.playerHero.TakeLustDamage(_currentTemptation.forcedLustGain, true);
         }
 
-        UpdateRejectCountUI();
+        // 버튼 복원
+        if (temptRejectButton != null) temptRejectButton.gameObject.SetActive(true);
 
-        // 잠시 후 닫기
-        StartCoroutine(CloseTemptationAfterDelay(2.0f));
+        // 종료
+        StartCoroutine(CloseTemptationAfterDelay(1.5f));
     }
 
     IEnumerator ReturnToGazeAfterDelay(float delay)
