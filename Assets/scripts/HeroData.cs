@@ -1,8 +1,4 @@
-// HeroData.cs
-// 영웅 데이터 ScriptableObject - 플레이어 및 적 영웅 정의
-
 using UnityEngine;
-using System.Collections.Generic;
 
 [CreateAssetMenu(fileName = "New Hero", menuName = "Kiwi Card Game/Hero Data")]
 public class HeroData : ScriptableObject
@@ -15,31 +11,31 @@ public class HeroData : ScriptableObject
 
     [Header("아트워크")]
     public Sprite portrait;           // 영웅 초상화
-    public Sprite portraitDamaged;    // 피해 입었을 때 초상화 (선택)
-    public Sprite portraitSeduced;    // 유혹 상태 초상화 (선택, 플레이어용)
+    public Sprite portraitDamaged;    // 피해 입었을 때 초상화
+    public Sprite portraitSeduced;    // 유혹 상태 초상화 (플레이어용)
+    public Sprite seduceEventArt;     // ★ 유혹 패널용 대형 일러스트
 
     [Header("기본 스탯")]
     public int maxHealth = 30;
-    public int startingArmor = 0;     // 시작 방어력
+    public int startingArmor = 0;
 
     [Header("영웅 능력")]
-    public HeroPowerData heroPower;   // 영웅 고유 능력
+    public HeroPowerData heroPower;
 
     [Header("적 영웅 전용 - 유혹 공격")]
-    public bool canSeduceAttack = false;  // 유혹 공격 가능 여부
-    public int seducePower = 5;           // 기본 유혹 공격력
+    public bool canSeduceAttack = false;
+    public int seducePower = 5;
     [TextArea(2, 3)]
-    public string seduceDescription;      // 유혹 공격 설명
+    public string seduceDescription;
 
-    [Header("시작 무기 (선택)")]
+    [Header("특수 이벤트")]
+    // ★ 이 줄이 빠져서 에러가 났던 것입니다.
+    public ClimaxEventData climaxEvent;
+
+    [Header("시작 무기")]
     public WeaponData startingWeapon;
-
-    // HeroData.cs 내부에 추가
-
-    [Header("유혹 이벤트 전용 연출")]
-    [Tooltip("유혹 패널이 뜰 때 나타날 고퀄리티 전용 일러스트")]
-    public Sprite seduceEventArt;
 }
+
 
 /// <summary>
 /// 영웅 능력 데이터

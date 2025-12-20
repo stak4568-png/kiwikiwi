@@ -369,12 +369,13 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
             return;
         }
 
-        // 일반 클릭 - 확대 보기
-        if (CardZoomManager.instance != null)
+        // [수정됨] 통합 매니저의 줌 기능 호출
+        if (GameUIManager.instance != null)
         {
-            CardZoomManager.instance.ShowCardZoom(this);
+            GameUIManager.instance.ShowCardZoom(this);
         }
     }
+
 
     /// <summary>
     /// 마우스 오버 시 릴리스 미리보기 (선택적 구현)

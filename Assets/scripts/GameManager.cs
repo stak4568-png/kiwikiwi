@@ -59,7 +59,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // 2. 필드 및 영웅 참조 자동 연결 (비어있을 경우)
+        // 2. 필드 및 영웅 참조 자동 연결
         if (playerField == null) playerField = GameObject.Find("PlayerArea")?.transform;
         if (enemyField == null) enemyField = GameObject.Find("EnemyArea")?.transform;
         if (playerHero == null) playerHero = HeroPortrait.playerHero;
@@ -69,7 +69,6 @@ public class GameManager : MonoBehaviour
     }
 
     // === 자원 관리 함수 ===
-
     public bool TrySpendMana(int amount)
     {
         if (currentMana >= amount)
@@ -105,7 +104,6 @@ public class GameManager : MonoBehaviour
     }
 
     // === 게임 이벤트 제어 ===
-
     public void CheckGameOver()
     {
         if (playerHero.currentHealth <= 0)
@@ -116,17 +114,18 @@ public class GameManager : MonoBehaviour
 
     public void TriggerClimax()
     {
-        Debug.Log("<color=magenta>★★★ CLIMAX 이벤트 발생! ★★★</color>");
-        // TODO: 클라이막스 연출 시스템 호출
+        if (enemyHero != null && enemyHero.heroData != null && enemyHero.heroData.climaxEvent != null)
+        {
+            if (GameUIManager.instance != null)
+                GameUIManager.instance.ShowClimaxEvent(enemyHero.heroData.climaxEvent);
+        }
     }
 
     // === 턴 관리 및 적 AI ===
-
     public void EndTurn()
     {
         if (isEnemyTurn) return;
 
-        // 플레이어 턴 종료 효과 발동
         if (EffectManager.instance != null)
             EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnTurnEnd, ZoneType.PlayerField);
 
@@ -140,28 +139,21 @@ public class GameManager : MonoBehaviour
 
         if (enemyHero != null) enemyHero.OnTurnStart();
 
-        // 적 턴 시작 효과 발동
         if (EffectManager.instance != null)
             EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnEnemyTurnStart, ZoneType.EnemyField);
 
         yield return new WaitForSeconds(0.5f);
 
-        // --- [핵심 수정: 적 영웅 유혹 공격] ---
+        // 1. 적 영웅 유혹 공격
         if (enemyHero != null && enemyHero.heroData != null && enemyHero.heroData.canSeduceAttack)
         {
             bool isHeroAttackDone = false;
-
-            // 영웅의 공격 실행 시 패널이 닫힐 때까지 기다리도록 콜백 전달
-            enemyHero.ExecuteSeduceAttack(() => {
-                isHeroAttackDone = true;
-            });
-
-            // 플레이어가 패널 버튼을 눌러 isHeroAttackDone이 true가 될 때까지 대기
+            enemyHero.ExecuteSeduceAttack(() => isHeroAttackDone = true);
             yield return new WaitUntil(() => isHeroAttackDone);
             yield return new WaitForSeconds(0.5f);
         }
 
-        // --- [적 하수인들 공격] ---
+        // 2. 적 하수인들 공격
         if (enemyField != null)
         {
             CardDisplay[] enemies = enemyField.GetComponentsInChildren<CardDisplay>();
@@ -169,15 +161,19 @@ public class GameManager : MonoBehaviour
             {
                 if (enemy.cardData is MonsterCardData monster)
                 {
-                    // 아군 필드 상황에 따라 유혹 또는 전투
                     bool isSeduceAttack = (playerField.childCount == 0);
 
                     if (isSeduceAttack)
                     {
                         bool monsterAttackDone = false;
-                        if (SeduceEventManager.instance != null)
+                        if (GameUIManager.instance != null)
                         {
-                            SeduceEventManager.instance.StartSeduceEvent(enemy, () => monsterAttackDone = true);
+                            string mName = monster.cardName;
+                            Sprite mArt = monster.seduceEventArt ??
+                                         (enemy.isArtRevealed ? (monster.originalArt ?? monster.censoredArt) : monster.censoredArt);
+                            int mLust = monster.lustAttack;
+
+                            GameUIManager.instance.ShowSeduceEvent(mName, mArt, mLust, () => monsterAttackDone = true);
                             yield return new WaitUntil(() => monsterAttackDone);
                         }
                     }
@@ -192,7 +188,6 @@ public class GameManager : MonoBehaviour
 
         if (enemyHero != null) enemyHero.OnTurnEnd();
 
-        // 적 턴 종료 효과 발동
         if (EffectManager.instance != null)
             EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnEnemyTurnEnd, ZoneType.EnemyField);
 
@@ -203,7 +198,6 @@ public class GameManager : MonoBehaviour
     void ExecuteEnemyAttack(CardDisplay enemy, MonsterCardData monster)
     {
         CardDisplay target = FindTauntTarget();
-
         if (target == null && playerField.childCount > 0)
         {
             int randomIndex = Random.Range(0, playerField.childCount);
@@ -233,12 +227,9 @@ public class GameManager : MonoBehaviour
     {
         isEnemyTurn = false;
         turnCount++;
-
         if (maxMana < 10) maxMana++;
         currentMana = maxMana;
         currentFocus = maxFocus;
-
-        Debug.Log($"── 플레이어 턴 {turnCount} 시작 ──");
 
         if (DeckManager.instance != null) DeckManager.instance.DrawCard();
         if (playerHero != null) playerHero.OnTurnStart();
@@ -251,8 +242,6 @@ public class GameManager : MonoBehaviour
 
         UpdateUI();
     }
-
-    // === UI 업데이트 ===
 
     public void UpdateUI()
     {

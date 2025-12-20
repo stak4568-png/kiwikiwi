@@ -230,9 +230,6 @@ public class HeroPortrait : MonoBehaviour, IPointerClickHandler, IDropHandler
 
     // === 적 영웅 전용: 유혹 공격 시퀀스 ===
 
-    /// <summary>
-    /// 적 영웅의 유혹 공격 실행 (패널 표시 후 대기)
-    /// </summary>
     public void ExecuteSeduceAttack(Action onAttackComplete)
     {
         if (isPlayerHero || heroData == null || !heroData.canSeduceAttack)
@@ -241,16 +238,15 @@ public class HeroPortrait : MonoBehaviour, IPointerClickHandler, IDropHandler
             return;
         }
 
-        if (SeduceEventManager.instance != null)
+        // [수정됨] 통합 매니저의 유혹 이벤트 호출
+        if (GameUIManager.instance != null)
         {
-            // 유혹 이벤트 매니저에게 패널 표시 요청 및 완료 콜백 전달
-            SeduceEventManager.instance.StartHeroSeduceEvent(this, onAttackComplete);
-        }
-        else
-        {
-            // 매니저 없을 시 즉시 데미지 처리 후 콜백 실행
-            if (playerHero != null) playerHero.TakeLustDamage(heroData.seducePower);
-            onAttackComplete?.Invoke();
+            GameUIManager.instance.ShowSeduceEvent(
+                heroData.heroName,
+                heroData.seduceEventArt ?? heroData.portrait,
+                heroData.seducePower,
+                onAttackComplete
+            );
         }
     }
 
