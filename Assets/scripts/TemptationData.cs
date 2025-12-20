@@ -1,8 +1,5 @@
 using UnityEngine;
 
-/// <summary>
-/// 응시 유혹 이벤트 데이터
-/// 카드를 오래 바라보면 단계별로 유혹 이벤트가 진행됨
 /// </summary>
 [CreateAssetMenu(fileName = "Temptation", menuName = "TcgEngine/TemptationData", order = 10)]
 public class TemptationData : ScriptableObject
