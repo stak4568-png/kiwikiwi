@@ -129,7 +129,15 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
         {
             if (boardArt != null)
             {
-                boardArt.sprite = data.art_board ?? targetArt;
+                // ★ 검열 상태 적용: 검열 해제 시에만 art_board 사용
+                if (isArtRevealed)
+                {
+                    boardArt.sprite = data.art_board ?? data.art_full;
+                }
+                else
+                {
+                    boardArt.sprite = data.art_censored ?? data.art_full;
+                }
                 // ★ [추가] 공격 가능 여부 시각화 (녹색 테두리 등)
                 boardArt.color = (isMine && canAttack) ? Color.green : Color.white;
             }
