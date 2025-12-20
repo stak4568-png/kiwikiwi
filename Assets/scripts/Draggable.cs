@@ -13,15 +13,15 @@ public class Draggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
         canvasGroup = GetComponent<CanvasGroup>();
     }
 
-    // 1. µå·¡±× ½ÃÀÛ
+    // 1. ï¿½å·¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     public void OnBeginDrag(PointerEventData eventData)
     {
-        // ÇöÀç ³»°¡ ¾îµğ ¼Ò¼ÓÀÎÁö È®ÀÎ
+        // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Ò¼ï¿½ï¿½ï¿½ï¿½ï¿½ È®ï¿½ï¿½
         parentToReturnTo = this.transform.parent;
         DropZone dz = parentToReturnTo.GetComponent<DropZone>();
         if (dz != null) sourceZone = dz.zoneType;
 
-        // [A] ÇÊµå¿¡ ÀÖ´Â Ä«µå¶ó¸é: °ø°İ È­»ìÇ¥ ¸ğµå
+        // [A] ï¿½Êµå¿¡ ï¿½Ö´ï¿½ Ä«ï¿½ï¿½ï¿½ï¿½: ï¿½ï¿½ï¿½ï¿½ È­ï¿½ï¿½Ç¥ ï¿½ï¿½ï¿½
         if (sourceZone == ZoneType.PlayerField)
         {
             if (CombatArrow.instance != null)
@@ -29,7 +29,7 @@ public class Draggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
                 CombatArrow.instance.Show(transform.position);
             }
         }
-        // [B] ¼ÕÆĞ¿¡ ÀÖ´Â Ä«µå¶ó¸é: Ä«µå ¼ÒÈ¯ ÀÌµ¿ ¸ğµå
+        // [B] ï¿½ï¿½ï¿½Ğ¿ï¿½ ï¿½Ö´ï¿½ Ä«ï¿½ï¿½ï¿½ï¿½: Ä«ï¿½ï¿½ ï¿½ï¿½È¯ ï¿½Ìµï¿½ ï¿½ï¿½ï¿½
         else if (sourceZone == ZoneType.Hand)
         {
             this.transform.SetParent(this.transform.parent.parent);
@@ -37,35 +37,35 @@ public class Draggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
         }
     }
 
-    // 2. µå·¡±× Áß
+    // 2. ï¿½å·¡ï¿½ï¿½ ï¿½ï¿½
     public void OnDrag(PointerEventData eventData)
     {
-        // ¼ÕÆĞÀÏ ¶§¸¸ Ä«µå ÀÌ¹ÌÁö°¡ ¸¶¿ì½º¸¦ µû¶ó´Ù´Ô
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ Ä«ï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ì½ºï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ù´ï¿½
         if (sourceZone == ZoneType.Hand)
         {
             this.transform.position = eventData.position;
         }
-        // È­»ìÇ¥ ¸ğµåÀÏ ¶§´Â CombatArrow ½ºÅ©¸³Æ®°¡ ½º½º·Î Update¿¡¼­ ¸¶¿ì½º¸¦ ÂÑ¾Æ°©´Ï´Ù.
+        // È­ï¿½ï¿½Ç¥ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ CombatArrow ï¿½ï¿½Å©ï¿½ï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Updateï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ì½ºï¿½ï¿½ ï¿½Ñ¾Æ°ï¿½ï¿½Ï´ï¿½.
     }
 
-    // 3. µå·¡±× Á¾·á
+    // 3. ï¿½å·¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     public void OnEndDrag(PointerEventData eventData)
     {
-        // [A] ÇÊµå °ø°İ ¸ğµå Á¾·á
+        // [A] ï¿½Êµï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         if (sourceZone == ZoneType.PlayerField)
         {
             if (CombatArrow.instance != null) CombatArrow.instance.Hide();
 
-            // ¸¶¿ì½º¸¦ ³õÀº ÁöÁ¡¿¡ ÀûÀÌ ÀÖ´ÂÁö È®ÀÎ
+            // ï¿½ï¿½ï¿½ì½ºï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ö´ï¿½ï¿½ï¿½ È®ï¿½ï¿½
             CheckCombatTarget(eventData);
         }
-        // [B] ¼ÕÆĞ ¼ÒÈ¯ ¸ğµå Á¾·á
+        // [B] ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¯ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         else
         {
             this.transform.SetParent(parentToReturnTo);
             if (canvasGroup != null) canvasGroup.blocksRaycasts = true;
 
-            // ºñÁÖ¾ó ¾÷µ¥ÀÌÆ® (Hand -> Field º¯½Å)
+            // ï¿½ï¿½ï¿½Ö¾ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ® (Hand -> Field ï¿½ï¿½ï¿½ï¿½)
             CardDisplay cd = GetComponent<CardDisplay>();
             if (cd != null)
             {
@@ -75,44 +75,119 @@ public class Draggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
         }
     }
 
-    // --- ÀüÅõ Å¸°ÙÆÃ ·ÎÁ÷ ---
+    // --- ì „íˆ¬ íƒ€ê²Ÿ ì²´í¬ ---
 
     void CheckCombatTarget(PointerEventData eventData)
     {
-        // ¸¶¿ì½º À§Ä¡ ¾Æ·¡¿¡ ÀÖ´Â ¸ğµç UI¸¦ ·¹ÀÌÄ³½ºÆ®·Î °Ë»ç
+        CardDisplay attacker = GetComponent<CardDisplay>();
+        if (attacker == null) return;
+
+        // ê³µê²© ê°€ëŠ¥ ì²´í¬
+        if (!attacker.CanAttackNow())
+        {
+            Debug.Log("ì´ í•˜ìˆ˜ì¸ì€ ì§€ê¸ˆ ê³µê²©í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤!");
+            return;
+        }
+
+        // ë§ˆìš°ìŠ¤ ìœ„ì¹˜ ì•„ë˜ì˜ ëª¨ë“  UIë¥¼ ë ˆì´ìºìŠ¤íŠ¸ë¡œ ê²€ì‚¬
         List<RaycastResult> results = new List<RaycastResult>();
         EventSystem.current.RaycastAll(eventData, results);
 
         foreach (RaycastResult result in results)
         {
-            // Ä«µå ÄÄÆ÷³ÍÆ®°¡ ÀÖ´ÂÁö È®ÀÎ
-            CardDisplay targetCard = result.gameObject.GetComponentInParent<CardDisplay>();
+            // 1. ì  ì˜ì›… ì´ˆìƒí™” ì²´í¬
+            HeroPortrait targetHero = result.gameObject.GetComponentInParent<HeroPortrait>();
+            if (targetHero != null && !targetHero.isPlayerHero)
+            {
+                // ë„ë°œ ì²´í¬
+                if (HasTauntOnEnemyField())
+                {
+                    Debug.Log("ë„ë°œ í•˜ìˆ˜ì¸ì„ ë¨¼ì € ì²˜ì¹˜í•´ì•¼ í•©ë‹ˆë‹¤!");
+                    return;
+                }
 
+                // ì˜ì›… ê³µê²© ì‹¤í–‰
+                ExecuteHeroAttack(attacker, targetHero);
+                return;
+            }
+
+            // 2. ì  ì¹´ë“œ ì²´í¬
+            CardDisplay targetCard = result.gameObject.GetComponentInParent<CardDisplay>();
             if (targetCard != null)
             {
-                // ±× Ä«µå°¡ Àû ÇÊµå(EnemyField)¿¡ ÀÖ´ÂÁö È®ÀÎ
+                // ì´ ì¹´ë“œê°€ ì  í•„ë“œ(EnemyField)ì— ìˆëŠ”ì§€ í™•ì¸
                 DropZone targetZone = targetCard.transform.parent.GetComponent<DropZone>();
                 if (targetZone != null && targetZone.zoneType == ZoneType.EnemyField)
                 {
-                    // ÀüÅõ ½ÇÇà!
-                    ExecuteCombat(GetComponent<CardDisplay>(), targetCard);
-                    break; // Å¸°ÙÀ» Ã£¾ÒÀ¸´Ï °Ë»ç Áß´Ü
+                    // ë„ë°œ ì²´í¬ (íƒ€ê²Ÿì´ ë„ë°œì´ ì•„ë‹Œë° ë„ë°œ í•˜ìˆ˜ì¸ì´ ìˆìœ¼ë©´ ì°¨ë‹¨)
+                    if (!targetCard.HasKeyword(Keyword.Taunt) && HasTauntOnEnemyField())
+                    {
+                        Debug.Log("ë„ë°œ í•˜ìˆ˜ì¸ì„ ë¨¼ì € ì²˜ì¹˜í•´ì•¼ í•©ë‹ˆë‹¤!");
+                        return;
+                    }
+
+                    // ì€ì‹  ì²´í¬
+                    if (targetCard.isStealthed)
+                    {
+                        Debug.Log("ì€ì‹  ìƒíƒœì¸ í•˜ìˆ˜ì¸ì€ ê³µê²©í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤!");
+                        return;
+                    }
+
+                    // ì „íˆ¬ ì‹¤í–‰!
+                    ExecuteCombat(attacker, targetCard);
+                    return;
                 }
             }
         }
     }
 
+    /// <summary>
+    /// ì  í•„ë“œì— ë„ë°œ í•˜ìˆ˜ì¸ì´ ìˆëŠ”ì§€ í™•ì¸
+    /// </summary>
+    bool HasTauntOnEnemyField()
+    {
+        if (GameManager.instance == null || GameManager.instance.enemyField == null)
+            return false;
+
+        DropZone enemyZone = GameManager.instance.enemyField.GetComponent<DropZone>();
+        return enemyZone != null && enemyZone.HasTaunt();
+    }
+
+    /// <summary>
+    /// í•˜ìˆ˜ì¸ì´ ì  ì˜ì›… ê³µê²©
+    /// </summary>
+    void ExecuteHeroAttack(CardDisplay attacker, HeroPortrait targetHero)
+    {
+        if (attacker.cardData is MonsterCardData atkData)
+        {
+            Debug.Log($"<color=red>{attacker.cardData.cardName}</color>ì´(ê°€) <color=blue>{targetHero.heroData.heroName}</color>ì„(ë¥¼) ê³µê²©!");
+
+            // ê³µê²© ì²˜ë¦¬
+            attacker.OnAttack(null);
+
+            // ì˜ì›…ì—ê²Œ ë°ë¯¸ì§€
+            targetHero.TakeDamage(attacker.currentAttack);
+
+            attacker.UpdateCardUI();
+        }
+    }
+
+    /// <summary>
+    /// í•˜ìˆ˜ì¸ ê°„ ì „íˆ¬
+    /// </summary>
     void ExecuteCombat(CardDisplay attacker, CardDisplay defender)
     {
-        // °ø°İÀÚ¿Í ¹æ¾îÀÚ ¸ğµÎ ¸ó½ºÅÍ µ¥ÀÌÅÍ¿©¾ß ÀüÅõ °¡´É
         if (attacker.cardData is MonsterCardData atkData && defender.cardData is MonsterCardData defData)
         {
-            Debug.Log($"<color=red>{attacker.cardData.cardName}</color>ÀÌ(°¡) <color=blue>{defender.cardData.cardName}</color>À»(¸¦) °ø°İÇÕ´Ï´Ù!");
+            Debug.Log($"<color=red>{attacker.cardData.cardName}</color>ì´(ê°€) <color=blue>{defender.cardData.cardName}</color>ì„(ë¥¼) ê³µê²©!");
 
-            // 1. ¹æ¾îÀÚ¿¡°Ô °ø°İÀÚÀÇ °ø°İ·Â¸¸Å­ µ¥¹ÌÁö
+            // ê³µê²© ì²˜ë¦¬
+            attacker.OnAttack(defender);
+
+            // 1. ë°©ì–´ìì—ê²Œ ê³µê²©ìì˜ ê³µê²©ë ¥ë§Œí¼ ë°ë¯¸ì§€
             defender.TakeDamage(attacker.currentAttack);
 
-            // 2. °ø°İÀÚ¿¡°Ô ¹æ¾îÀÚÀÇ °ø°İ·Â¸¸Å­ µ¥¹ÌÁö (¹İ°İ)
+            // 2. ê³µê²©ìì—ê²Œ ë°©ì–´ìì˜ ê³µê²©ë ¥ë§Œí¼ ë°ë¯¸ì§€ (ë°˜ê²©)
             attacker.TakeDamage(defender.currentAttack);
         }
     }

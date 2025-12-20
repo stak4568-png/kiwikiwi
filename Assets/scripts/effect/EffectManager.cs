@@ -96,7 +96,7 @@ public class EffectManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 타겟 선택 완료 시 호출
+    /// 타겟 선택 완료 시 호출 (카드 타겟)
     /// </summary>
     public void OnTargetSelected(CardDisplay target)
     {
@@ -107,6 +107,35 @@ public class EffectManager : MonoBehaviour
         // 유효한 타겟인지 체크
         if (IsValidTarget(pendingEffect.targetType, target))
         {
+            pendingEffect.Execute(pendingContext);
+        }
+        else
+        {
+            Debug.Log("[타겟 선택] 유효하지 않은 대상입니다.");
+        }
+
+        CancelTargetSelection();
+    }
+
+    /// <summary>
+    /// 영웅 타겟 선택 완료 시 호출
+    /// </summary>
+    public void OnHeroTargetSelected(HeroPortrait targetHero)
+    {
+        if (!isWaitingForTarget || pendingEffect == null) return;
+
+        // 영웅 타겟 유효성 체크
+        bool isValid = false;
+        if (pendingEffect.targetType == EffectTarget.EnemyHero && !targetHero.isPlayerHero)
+            isValid = true;
+        else if (pendingEffect.targetType == EffectTarget.PlayerHero && targetHero.isPlayerHero)
+            isValid = true;
+        else if (pendingEffect.targetType == EffectTarget.SingleEnemy && !targetHero.isPlayerHero)
+            isValid = true;  // 적 하수인 또는 적 영웅 선택 가능
+
+        if (isValid)
+        {
+            pendingContext.targetHero = targetHero;
             pendingEffect.Execute(pendingContext);
         }
         else

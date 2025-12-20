@@ -61,6 +61,8 @@ public class EffectContext
 {
     public CardDisplay sourceCard;      // 효과를 발동한 카드
     public CardDisplay targetCard;      // 대상 카드 (있을 경우)
+    public HeroPortrait sourceHero;     // 효과를 발동한 영웅 (있을 경우)
+    public HeroPortrait targetHero;     // 대상 영웅 (있을 경우)
     public EffectTiming currentTiming;  // 현재 타이밍
     public int damageAmount;            // 데미지량 (OnDamaged 등에서 사용)
     public bool isCancelled;            // 효과 취소 여부
@@ -68,6 +70,13 @@ public class EffectContext
     public EffectContext(CardDisplay source, EffectTiming timing)
     {
         sourceCard = source;
+        currentTiming = timing;
+        isCancelled = false;
+    }
+
+    public EffectContext(HeroPortrait source, EffectTiming timing)
+    {
+        sourceHero = source;
         currentTiming = timing;
         isCancelled = false;
     }
