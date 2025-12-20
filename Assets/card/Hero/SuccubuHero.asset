@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4e50f7080775ac49a9aa7c10b2ebe5b, type: 3}
+  m_Name: SuccubuHero
+  m_EditorClassIdentifier: Assembly-CSharp::HeroData
+  heroId: sucuhero
+  heroName: "\uC11C\uD050\uBC84\uC2A4"
+  description: "\uC11C\uD050\uBC84\uC2A4\uC785\uB2C8\uB2F9"
+  portrait: {fileID: 6482213247728414424, guid: ee97c9fe30d0d374a8573e403cc7e398, type: 3}
+  portraitDamaged: {fileID: 6482213247728414424, guid: ee97c9fe30d0d374a8573e403cc7e398, type: 3}
+  portraitSeduced: {fileID: 6482213247728414424, guid: ee97c9fe30d0d374a8573e403cc7e398, type: 3}
+  maxHealth: 30
+  startingArmor: 0
+  heroPower: {fileID: 0}
+  canSeduceAttack: 1
+  seducePower: 15
+  seduceDescription: "\uC73C\uD750\uD750\uD750"
+  startingWeapon: {fileID: 0}

@@ -40,6 +40,10 @@ public class GameManager : MonoBehaviour
     public Transform playerField;
     public Transform enemyField;
 
+    [Header("Hero References")]
+    public HeroPortrait playerHeroPortrait;
+    public HeroPortrait enemyHeroPortrait;
+
     void Awake()
     {
         if (instance == null) instance = this;
@@ -66,6 +70,10 @@ public class GameManager : MonoBehaviour
         // Zone 참조 자동 찾기 (씬에 해당 이름의 오브젝트가 있어야 함)
         if (playerField == null) playerField = GameObject.Find("PlayerArea")?.transform;
         if (enemyField == null) enemyField = GameObject.Find("EnemyArea")?.transform;
+
+        // 영웅 초상화 참조 자동 찾기
+        if (playerHeroPortrait == null) playerHeroPortrait = HeroPortrait.playerHero;
+        if (enemyHeroPortrait == null) enemyHeroPortrait = HeroPortrait.enemyHero;
 
         UpdateUI();
     }
@@ -197,11 +205,24 @@ public class GameManager : MonoBehaviour
         isEnemyTurn = true;
         Debug.Log("── 적 턴 시작 ──");
 
+        // 적 영웅 턴 시작 처리
+        if (enemyHeroPortrait != null)
+            enemyHeroPortrait.OnTurnStart();
+
         // 적 턴 시작 효과 발동
         if (EffectManager.instance != null)
             EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnEnemyTurnStart, ZoneType.EnemyField);
 
         yield return new WaitForSeconds(0.5f);
+
+        // [적 영웅 유혹 공격] 필드 상황과 관계없이 매 턴 유혹 공격 가능
+        if (enemyHeroPortrait != null && enemyHeroPortrait.heroData != null
+            && enemyHeroPortrait.heroData.canSeduceAttack)
+        {
+            yield return new WaitForSeconds(0.5f);
+            enemyHeroPortrait.ExecuteSeduceAttack();
+            yield return new WaitForSeconds(0.5f);
+        }
 
         if (enemyField != null)
         {
@@ -235,6 +256,10 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
+
+        // 적 영웅 턴 종료 처리
+        if (enemyHeroPortrait != null)
+            enemyHeroPortrait.OnTurnEnd();
 
         // 적 턴 종료 효과 발동
         if (EffectManager.instance != null)
@@ -295,6 +320,10 @@ public class GameManager : MonoBehaviour
 
         // 카드 드로우
         if (DeckManager.instance != null) DeckManager.instance.DrawCard();
+
+        // 플레이어 영웅 턴 시작 처리
+        if (playerHeroPortrait != null)
+            playerHeroPortrait.OnTurnStart();
 
         // 아군 카드들 상태 갱신
         if (playerField != null)
