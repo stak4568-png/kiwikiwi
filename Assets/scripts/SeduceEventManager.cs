@@ -14,15 +14,16 @@ public class SeduceEventManager : MonoBehaviour
     public TMP_Text descriptionText;
 
     [Header("Buttons")]
-    public Button blockButton;  // ¸¶³ª·Î ÀúÇ×
-    public Button endureButton; // ±×³É ¸Â±â
+    public Button blockButton;  // ë§‰ê¸° ë²„íŠ¼
+    public Button endureButton; // ë²„í‹°ê¸° ë²„íŠ¼
 
     [Header("Button Texts")]
     public TMP_Text blockButtonText;
 
     private CardDisplay currentAttacker;
+    private HeroPortrait currentHeroAttacker;  // ì˜ì›… ê³µê²©ì
     private int currentLustAtk;
-    private Action onComplete; // °ø°İ Á¾·á ÈÄ Àû ÅÏÀ» °è¼Ó ÁøÇàÇÏ±â À§ÇÑ Äİ¹é
+    private Action onComplete;
 
     void Awake()
     {
@@ -31,56 +32,95 @@ public class SeduceEventManager : MonoBehaviour
     }
 
     /// <summary>
-    /// À¯È¤ ÀÌº¥Æ® ½ÃÀÛ
+    /// ìœ í˜¹ ì´ë²¤íŠ¸ ì‹œì‘ (ì¹´ë“œ ê³µê²©ì)
     /// </summary>
     public void StartSeduceEvent(CardDisplay attacker, Action callback)
     {
         currentAttacker = attacker;
+        currentHeroAttacker = null;
         onComplete = callback;
 
         if (attacker.cardData is MonsterCardData monster)
         {
             currentLustAtk = monster.lustAttack;
 
-            // 1. UI ¼¼ÆÃ
+            // 1. UI ì„¤ì •
             seducePanel.SetActive(true);
             monsterNameText.text = monster.cardName;
-            // À¯È¤ ½Ã¿¡´Â ÇØ±İ ¿©ºÎ¿Í »ó°ü¾øÀÌ ¿øº» ÀÏ·¯½ºÆ®¸¦ º¸¿©ÁÖ¾î À§±â°¨ Á¶¼º °¡´É
             monsterArt.sprite = attacker.isArtRevealed ? monster.originalArt : monster.censoredArt;
-            descriptionText.text = $"{monster.cardName}ÀÇ À¯È¤ °ø°İ! ({currentLustAtk} Lust)";
+            descriptionText.text = $"{monster.cardName}ì˜ ìœ í˜¹ ê³µê²©! ({currentLustAtk} Lust)";
 
-            // 2. ¹öÆ° ¼¼ÆÃ
-            int currentMana = GameManager.instance.currentMana;
-            blockButtonText.text = $"¸¶³ª·Î ÀúÇ× (³²Àº ¸¶³ª: {currentMana})";
-
-            // ¸¶³ª°¡ ¾ø¾îµµ ¹öÆ°Àº ´©¸¦ ¼ö ÀÖ°Ô ÇÏµÇ, È¿À²Àº 0ÀÌ µÊ
-            blockButton.onClick.RemoveAllListeners();
-            blockButton.onClick.AddListener(OnBlockClicked);
-
-            endureButton.onClick.RemoveAllListeners();
-            endureButton.onClick.AddListener(OnEndureClicked);
+            // 2. ë²„íŠ¼ ì„¤ì •
+            SetupButtons();
         }
     }
 
-    // [¼±ÅÃÁö 1] ¸¶³ª·Î ÀúÇ×
+    /// <summary>
+    /// ìœ í˜¹ ì´ë²¤íŠ¸ ì‹œì‘ (ì˜ì›… ê³µê²©ì)
+    /// </summary>
+    public void StartSeduceEvent(HeroPortrait attacker, Action callback)
+    {
+        currentAttacker = null;
+        currentHeroAttacker = attacker;
+        onComplete = callback;
+
+        if (attacker.heroData != null)
+        {
+            currentLustAtk = attacker.heroData.seducePower;
+
+            // 1. UI ì„¤ì •
+            seducePanel.SetActive(true);
+            monsterNameText.text = attacker.heroData.heroName;
+
+            // ì˜ì›… ì´ˆìƒí™” ì‚¬ìš©
+            if (attacker.heroData.portrait != null)
+                monsterArt.sprite = attacker.heroData.portrait;
+
+            // ìœ í˜¹ ì„¤ëª…ì´ ìˆìœ¼ë©´ ì‚¬ìš©, ì—†ìœ¼ë©´ ê¸°ë³¸ í…ìŠ¤íŠ¸
+            string desc = !string.IsNullOrEmpty(attacker.heroData.seduceDescription)
+                ? attacker.heroData.seduceDescription
+                : $"{attacker.heroData.heroName}ì˜ ìœ í˜¹ ê³µê²©!";
+            descriptionText.text = $"{desc} ({currentLustAtk} Lust)";
+
+            // 2. ë²„íŠ¼ ì„¤ì •
+            SetupButtons();
+        }
+    }
+
+    /// <summary>
+    /// ë²„íŠ¼ ì´ë²¤íŠ¸ ì„¤ì •
+    /// </summary>
+    void SetupButtons()
+    {
+        int currentMana = GameManager.instance.currentMana;
+        blockButtonText.text = $"ë§‰ê¸° (ë§ˆë‚˜ ì‚¬ìš©: {currentMana})";
+
+        blockButton.onClick.RemoveAllListeners();
+        blockButton.onClick.AddListener(OnBlockClicked);
+
+        endureButton.onClick.RemoveAllListeners();
+        endureButton.onClick.AddListener(OnEndureClicked);
+    }
+
+    // [ì„ íƒì§€ 1] ë§‰ê¸°
     void OnBlockClicked()
     {
         int manaUsed = GameManager.instance.currentMana;
         int finalDamage = Mathf.Max(0, currentLustAtk - manaUsed);
 
-        // ¸¶³ª ÀüºÎ ¼Ò¸ğ
+        // ë§ˆë‚˜ ì „ë¶€ ì†Œëª¨
         GameManager.instance.TrySpendMana(manaUsed);
 
-        Debug.Log($"¸¶³ª {manaUsed}¸¦ »ç¿ëÇÏ¿© À¯È¤ ÀúÇ×! ÃÖÁ¾ µ¥¹ÌÁö: {finalDamage}");
+        Debug.Log($"ë§ˆë‚˜ {manaUsed}ë¥¼ ì‚¬ìš©í•˜ì—¬ ìœ í˜¹ ë°©ì–´! ìµœì¢… ë°ë¯¸ì§€: {finalDamage}");
         GameManager.instance.AddLustDirectly(finalDamage);
 
         FinishEvent();
     }
 
-    // [¼±ÅÃÁö 2] ±×³É ¸Â±â (¸¶³ª º¸Á¸)
+    // [ì„ íƒì§€ 2] ë²„í‹°ê¸° (ì „ë¶€ ë°›ê¸°)
     void OnEndureClicked()
     {
-        Debug.Log("À¯È¤À» ±×´ë·Î ¹Ş¾ÆµéÀÓ. ¸¶³ª º¸Á¸.");
+        Debug.Log("ìœ í˜¹ì„ ê·¸ëŒ€ë¡œ ë°›ì•„ë“¤ì„. ì „ë¶€ í”¼í•´.");
         GameManager.instance.AddLustDirectly(currentLustAtk);
 
         FinishEvent();
@@ -89,6 +129,8 @@ public class SeduceEventManager : MonoBehaviour
     void FinishEvent()
     {
         seducePanel.SetActive(false);
-        onComplete?.Invoke(); // ´ÙÀ½ ÀûÀÇ °ø°İÀ¸·Î ³Ñ¾î°¨
+        currentAttacker = null;
+        currentHeroAttacker = null;
+        onComplete?.Invoke();
     }
 }

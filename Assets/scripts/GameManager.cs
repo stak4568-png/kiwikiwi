@@ -219,9 +219,22 @@ public class GameManager : MonoBehaviour
         if (enemyHeroPortrait != null && enemyHeroPortrait.heroData != null
             && enemyHeroPortrait.heroData.canSeduceAttack)
         {
-            yield return new WaitForSeconds(0.5f);
-            enemyHeroPortrait.ExecuteSeduceAttack();
-            yield return new WaitForSeconds(0.5f);
+            bool heroSeduceDone = false;
+            if (SeduceEventManager.instance != null)
+            {
+                SeduceEventManager.instance.StartSeduceEvent(enemyHeroPortrait, () => {
+                    heroSeduceDone = true;
+                });
+                // 플레이어가 선택을 마칠 때까지 대기
+                yield return new WaitUntil(() => heroSeduceDone);
+            }
+            else
+            {
+                // SeduceEventManager가 없으면 직접 실행
+                yield return new WaitForSeconds(0.5f);
+                enemyHeroPortrait.ExecuteSeduceAttack();
+                yield return new WaitForSeconds(0.5f);
+            }
         }
 
         if (enemyField != null)
