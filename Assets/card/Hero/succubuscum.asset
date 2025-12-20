@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed39a963a6612014a8c10300706e3725, type: 3}
+  m_Name: succubuscum
+  m_EditorClassIdentifier: Assembly-CSharp::ClimaxEventData
+  eventTitle: "\uC11C\uD050\uBC84\uC2A4\uD55C\uD14C \uB2F9\uD558\uB2E4"
+  climaxIllustration: {fileID: 7342428427524365861, guid: a5af2e2b8f104e1449cbe478c9c4cbb4, type: 3}
+  dialogueLines:
+  - "\uC790\uC9C0 \uB9CC\uC838\uC904\uAE4C?"
+  acceptButtonText: "\uC218\uB77D\uD55C\uB2E4"
+  rejectButtonText: "\uAC70\uC808\uD55C\uB2E4"
+  acceptArt: {fileID: 7342428427524365861, guid: a5af2e2b8f104e1449cbe478c9c4cbb4, type: 3}
+  acceptDialogues:
+  - "\uC790\uC9C0 \uBE68\uC544\uC904\uAC8C \uD398\uB85C\uD398\uB85C"
+  acceptLustReduction: 100
+  acceptManaLockTurns: 2
+  rejectArt: {fileID: 6482213247728414424, guid: ee97c9fe30d0d374a8573e403cc7e398, type: 3}
+  rejectDialogues:
+  - "\uBB50\uC57C \uAE30\uAECF \uB3C4\uC640\uC900\uB2E4\uB294\uB370 \uD55C\uB2E4\uB294
+    \uAC8C \uB0B4 \uBAB8 \uBCF4\uACE0 \uC790\uC9C0 \uD754\uB4E4\uAE30\uC57C? \uBCC0\uD0DC"
+  rejectLustReduction: 100
+  rejectManaLockTurns: 1

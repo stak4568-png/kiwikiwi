@@ -139,25 +139,23 @@ public class HeroPortrait : MonoBehaviour, IPointerClickHandler, IDropHandler
     /// <summary>
     /// 유혹 데미지 처리 (플레이어 전용)
     /// </summary>
+    // HeroPortrait.cs 의 TakeLustDamage 함수 부분 수정
+
     public void TakeLustDamage(int amount, bool ignoreMana = false)
     {
         if (!isPlayerHero) return;
 
-        int finalLust = amount;
-        if (!ignoreMana && GameManager.instance != null)
-        {
-            // 마나 수치만큼 유혹 공격 경감
-            finalLust = Mathf.Max(0, amount - GameManager.instance.currentMana);
-        }
-
+        int finalLust = ignoreMana ? amount : Mathf.Max(0, amount - GameManager.instance.currentMana);
         currentLust += finalLust;
+
+        UpdateUI(); // UI 먼저 갱신해서 100%를 보여줌
 
         if (currentLust >= 100)
         {
             currentLust = 100;
-            if (GameManager.instance != null) GameManager.instance.TriggerClimax();
+            // 약간의 시간차를 두어 유혹 패널 종료 로직과의 충돌 방지 (선택 사항)
+            GameManager.instance.Invoke("TriggerClimax", 0.1f);
         }
-        UpdateUI();
     }
 
     public void Heal(int amount)
@@ -328,5 +326,12 @@ public class HeroPortrait : MonoBehaviour, IPointerClickHandler, IDropHandler
             if (heroPowerUsedOverlay != null)
                 heroPowerUsedOverlay.SetActive(heroPowerUsesThisTurn >= heroData.heroPower.usesPerTurn);
         }
+    }
+    // HeroPortrait.cs 에 추가
+    public void ReduceLust(int amount)
+    {
+        currentLust = Mathf.Max(0, currentLust - amount);
+        UpdateUI();
+        Debug.Log($"흥분도 감소: -{amount} (현재: {currentLust})");
     }
 }

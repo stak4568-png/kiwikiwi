@@ -3,16 +3,27 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "New Climax Event", menuName = "Kiwi Card Game/Special Event/Climax Data")]
 public class ClimaxEventData : ScriptableObject
 {
-    [Header("이벤트 기본 정보")]
+    [Header("1. 이벤트 기본 정보")]
     public string eventTitle;
+    public Sprite climaxIllustration;
+    [TextArea(2, 4)]
+    public string[] dialogueLines;
 
-    [Header("연출 자원")]
-    public Sprite climaxIllustration;   // 화면 전체에 뜰 고퀄리티 일러스트
+    [Header("2. 운명의 선택지 버튼 텍스트")]
+    public string acceptButtonText = "굴복한다";
+    public string rejectButtonText = "저항한다";
 
-    [Header("텍스트 연출")]
-    [TextArea(3, 5)]
-    public string[] dialogueLines;       // 순차적으로 출력될 대사들
+    [Header("3. [수락] 시 연출 및 효과")]
+    public Sprite acceptArt;
+    [TextArea(2, 4)]
+    public string[] acceptDialogues;
+    public int acceptLustReduction = 100;
+    public int acceptManaLockTurns = 2;     // 수락 시 마나 잠금 턴
 
-    [Header("게임 결과")]
-    public bool isImmediateGameOver = true; // 이벤트 종료 후 바로 패배 처리할지 여부
+    [Header("4. [거절] 시 연출 및 효과")]
+    public Sprite rejectArt;
+    [TextArea(2, 4)]
+    public string[] rejectDialogues;
+    public int rejectLustReduction = 30;
+    public int rejectManaLockTurns = 1;     // ★ 거절 시 마나 잠금 턴 (체력 피해는 삭제됨)
 }

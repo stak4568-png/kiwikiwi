@@ -14,6 +14,9 @@ public class GameManager : MonoBehaviour
     public int maxFocus = 1;
     public int currentFocus = 1;
 
+    [Header("마나 잠금 페널티")]
+    [SerializeField] private int manaLockTurnCount = 0; // 마나가 잠긴 남은 턴 수
+
     [Header("턴 상태")]
     public int turnCount = 1;
     public bool isEnemyTurn = false;
@@ -69,21 +72,27 @@ public class GameManager : MonoBehaviour
     }
 
     // === 자원 관리 함수 ===
+
     public bool TrySpendMana(int amount)
     {
-        if (currentMana >= amount)
+        // 마나 잠금 상태일 때는 항상 0이므로 소비 불가
+        if (currentMana >= amount && amount > 0)
         {
             currentMana -= amount;
             UpdateUI();
             return true;
         }
-        return false;
+        return amount == 0; // 비용이 0인 카드는 낼 수 있음
     }
 
     public void GainMana(int amount)
     {
-        currentMana = Mathf.Min(currentMana + amount, maxMana);
-        UpdateUI();
+        // 마나 잠금 상태가 아닐 때만 마나 획득 가능
+        if (manaLockTurnCount <= 0)
+        {
+            currentMana = Mathf.Min(currentMana + amount, maxMana);
+            UpdateUI();
+        }
     }
 
     public bool TryUseFocus()
@@ -103,7 +112,19 @@ public class GameManager : MonoBehaviour
         UpdateUI();
     }
 
+    /// <summary>
+    /// 마나 잠금 페널티 설정 (수락 시 호출)
+    /// </summary>
+    public void SetManaLock(int turns)
+    {
+        manaLockTurnCount = turns;
+        currentMana = 0; // 즉시 마나를 0으로 만듦
+        Debug.Log($"<color=red>마나 잠금 페널티 발생: {turns}턴 동안 마나 사용 불가</color>");
+        UpdateUI();
+    }
+
     // === 게임 이벤트 제어 ===
+
     public void CheckGameOver()
     {
         if (playerHero.currentHealth <= 0)
@@ -117,11 +138,30 @@ public class GameManager : MonoBehaviour
         if (enemyHero != null && enemyHero.heroData != null && enemyHero.heroData.climaxEvent != null)
         {
             if (GameUIManager.instance != null)
+            {
+                Debug.Log("GameManager: 클라이맥스 시작");
                 GameUIManager.instance.ShowClimaxEvent(enemyHero.heroData.climaxEvent);
+
+                // 클라이맥스 발생 시 적의 현재 공격 사이클 중단
+                StopAllCoroutines();
+                StartCoroutine(ReturnToPlayerTurnAfterEvent());
+            }
         }
     }
 
+    // 이벤트 종료 후 플레이어 턴으로 안전하게 복귀하는 코루틴
+    IEnumerator ReturnToPlayerTurnAfterEvent()
+    {
+        // UI가 완전히 닫힐 때까지 대기
+        yield return new WaitUntil(() => GameUIManager.instance.currentState == GameUIState.None);
+        yield return new WaitForSeconds(0.5f);
+
+        Debug.Log("이벤트 연출 종료. 플레이어 턴을 시작합니다.");
+        StartNewPlayerTurn();
+    }
+
     // === 턴 관리 및 적 AI ===
+
     public void EndTurn()
     {
         if (isEnemyTurn) return;
@@ -150,6 +190,8 @@ public class GameManager : MonoBehaviour
             bool isHeroAttackDone = false;
             enemyHero.ExecuteSeduceAttack(() => isHeroAttackDone = true);
             yield return new WaitUntil(() => isHeroAttackDone);
+
+            if (playerHero.currentLust >= 100) yield break;
             yield return new WaitForSeconds(0.5f);
         }
 
@@ -159,6 +201,8 @@ public class GameManager : MonoBehaviour
             CardDisplay[] enemies = enemyField.GetComponentsInChildren<CardDisplay>();
             foreach (CardDisplay enemy in enemies)
             {
+                if (playerHero.currentLust >= 100) yield break;
+
                 if (enemy.cardData is MonsterCardData monster)
                 {
                     bool isSeduceAttack = (playerField.childCount == 0);
@@ -169,18 +213,20 @@ public class GameManager : MonoBehaviour
                         if (GameUIManager.instance != null)
                         {
                             string mName = monster.cardName;
-                            Sprite mArt = monster.seduceEventArt ??
-                                         (enemy.isArtRevealed ? (monster.originalArt ?? monster.censoredArt) : monster.censoredArt);
+                            Sprite mArt = monster.seduceEventArt ?? (enemy.isArtRevealed ? (monster.originalArt ?? monster.censoredArt) : monster.censoredArt);
                             int mLust = monster.lustAttack;
 
                             GameUIManager.instance.ShowSeduceEvent(mName, mArt, mLust, () => monsterAttackDone = true);
                             yield return new WaitUntil(() => monsterAttackDone);
+
+                            if (playerHero.currentLust >= 100) yield break;
                         }
                     }
                     else
                     {
                         yield return new WaitForSeconds(0.6f);
                         ExecuteEnemyAttack(enemy, monster);
+                        if (playerHero.currentLust >= 100) yield break;
                     }
                 }
             }
@@ -227,8 +273,22 @@ public class GameManager : MonoBehaviour
     {
         isEnemyTurn = false;
         turnCount++;
+
+        // 최대 마나 증가
         if (maxMana < 10) maxMana++;
-        currentMana = maxMana;
+
+        // ★ 마나 잠금 체크 및 마나 회복 로직 ★
+        if (manaLockTurnCount > 0)
+        {
+            currentMana = 0;
+            manaLockTurnCount--;
+            Debug.Log($"마나 잠금 지속 중... 남은 턴: {manaLockTurnCount}");
+        }
+        else
+        {
+            currentMana = maxMana;
+        }
+
         currentFocus = maxFocus;
 
         if (DeckManager.instance != null) DeckManager.instance.DrawCard();
@@ -245,16 +305,26 @@ public class GameManager : MonoBehaviour
 
     public void UpdateUI()
     {
-        if (manaText != null) manaText.text = $"{currentMana} / {maxMana}";
+        // 마나 텍스트 표시 (잠금 상태일 때 시각적 피드백 추가 가능)
+        if (manaText != null)
+        {
+            manaText.text = (manaLockTurnCount > 0) ? $"0 / {maxMana} (잠김)" : $"{currentMana} / {maxMana}";
+            manaText.color = (manaLockTurnCount > 0) ? Color.red : Color.white;
+        }
+
         if (focusText != null) focusText.text = $"Focus: {currentFocus}";
         if (turnText != null) turnText.text = $"Turn {turnCount}";
 
+        // 마나 구슬 업데이트
         for (int i = 0; i < manaIcons.Count; i++)
         {
             if (i < maxMana)
             {
                 manaIcons[i].transform.parent.gameObject.SetActive(true);
-                manaIcons[i].enabled = (i < currentMana);
+                // 잠금 상태면 구슬을 다 끔, 아니면 현재 마나만큼 켬
+                manaIcons[i].enabled = (manaLockTurnCount <= 0 && i < currentMana);
+                // 잠금 상태일 때 구슬 색상을 어둡게 변경
+                manaIcons[i].color = (manaLockTurnCount > 0) ? new Color(0.3f, 0.3f, 0.3f) : Color.white;
             }
             else
             {
