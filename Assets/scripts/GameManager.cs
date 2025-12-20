@@ -216,8 +216,7 @@ public class GameManager : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
 
         // [적 영웅 유혹 공격] 필드 상황과 관계없이 매 턴 유혹 공격 가능
-        if (enemyHeroPortrait != null && enemyHeroPortrait.heroData != null
-            && enemyHeroPortrait.heroData.canSeduceAttack)
+        if (enemyHeroPortrait != null && enemyHeroPortrait.CanSeduceAttack())
         {
             bool heroSeduceDone = false;
             if (SeduceEventManager.instance != null)

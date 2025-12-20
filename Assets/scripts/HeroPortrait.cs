@@ -53,6 +53,10 @@ public class HeroPortrait : MonoBehaviour, IPointerClickHandler, IDropHandler
     public TMP_Text heroPowerCostText;
     public GameObject heroPowerUsedOverlay;
 
+    [Header("유혹 공격 (HeroData 없을 때 사용)")]
+    public bool canSeduceAttack = false;  // 유혹 공격 가능 여부
+    public int seducePower = 5;           // 기본 유혹 공격력
+
     [Header("시각 효과")]
     public Color normalFrameColor = Color.white;
     public Color damagedFrameColor = Color.red;
@@ -339,6 +343,30 @@ public class HeroPortrait : MonoBehaviour, IPointerClickHandler, IDropHandler
 
         // 타겟 불필요 - 즉시 발동
         ExecuteHeroPower(null);
+    }
+
+    /// <summary>
+    /// 유혹 공격 가능 여부 (HeroData 또는 컴포넌트 설정 확인)
+    /// </summary>
+    public bool CanSeduceAttack()
+    {
+        // HeroData가 있으면 그 설정 사용
+        if (heroData != null)
+            return heroData.canSeduceAttack;
+
+        // 없으면 컴포넌트의 직접 설정 사용
+        return canSeduceAttack;
+    }
+
+    /// <summary>
+    /// 유혹 공격력 반환
+    /// </summary>
+    public int GetSeducePower()
+    {
+        if (heroData != null)
+            return heroData.seducePower;
+
+        return seducePower;
     }
 
     /// <summary>

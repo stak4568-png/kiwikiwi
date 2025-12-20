@@ -64,27 +64,37 @@ public class SeduceEventManager : MonoBehaviour
         currentHeroAttacker = attacker;
         onComplete = callback;
 
+        // HeroPortrait의 메서드로 유혹력 가져오기
+        currentLustAtk = attacker.GetSeducePower();
+
+        // HeroData가 있으면 데이터에서, 없으면 기본값 사용
+        string heroName = "적 영웅";
+        Sprite heroPortrait = null;
+        string seduceDesc = "";
+
         if (attacker.heroData != null)
         {
-            currentLustAtk = attacker.heroData.seducePower;
-
-            // 1. UI 설정
-            seducePanel.SetActive(true);
-            monsterNameText.text = attacker.heroData.heroName;
-
-            // 영웅 초상화 사용
-            if (attacker.heroData.portrait != null)
-                monsterArt.sprite = attacker.heroData.portrait;
-
-            // 유혹 설명이 있으면 사용, 없으면 기본 텍스트
-            string desc = !string.IsNullOrEmpty(attacker.heroData.seduceDescription)
-                ? attacker.heroData.seduceDescription
-                : $"{attacker.heroData.heroName}의 유혹 공격!";
-            descriptionText.text = $"{desc} ({currentLustAtk} Lust)";
-
-            // 2. 버튼 설정
-            SetupButtons();
+            heroName = attacker.heroData.heroName;
+            heroPortrait = attacker.heroData.portrait;
+            seduceDesc = attacker.heroData.seduceDescription;
         }
+
+        // 1. UI 설정
+        seducePanel.SetActive(true);
+        monsterNameText.text = heroName;
+
+        // 영웅 초상화 사용
+        if (heroPortrait != null)
+            monsterArt.sprite = heroPortrait;
+
+        // 유혹 설명이 있으면 사용, 없으면 기본 텍스트
+        string desc = !string.IsNullOrEmpty(seduceDesc)
+            ? seduceDesc
+            : $"{heroName}의 유혹 공격!";
+        descriptionText.text = $"{desc} ({currentLustAtk} Lust)";
+
+        // 2. 버튼 설정
+        SetupButtons();
     }
 
     /// <summary>
