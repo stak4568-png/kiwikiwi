@@ -208,6 +208,13 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
             return;
         }
 
+        // ★ 릴리스 모드 처리 (수정됨)
+        if (ReleaseManager.instance != null && ReleaseManager.instance.IsInReleaseMode())
+        {
+            if (ReleaseManager.instance.TryReleaseCard(this))
+                return;
+        }
+
         // 일반 클릭: 카드 확대
         if (GameUIManager.instance != null)
             GameUIManager.instance.ShowCardZoom(this);
