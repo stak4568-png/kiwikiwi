@@ -1,392 +1,186 @@
-// CardDisplay.cs
-// 카드 비주얼 및 상호작용 - 효과 시스템 통합 버전
-
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
-using System.Collections.Generic;
 
-public class CardDisplay : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler
+public class CardDisplay : MonoBehaviour, IPointerClickHandler, IPointerEnterHandler, IPointerExitHandler
 {
-    [Header("Data Sources")]
-    public CardData cardData;
-    public ElementIconData iconData;
+    [Header("Data Source")]
+    public CardData data;
+    public bool isMine = false;
 
-    [Header("Live Stats (전투 실시간 데이터)")]
-    public int currentHealth;
+    [Header("Runtime Stats")]
     public int currentAttack;
-
-    [Header("Runtime Keywords (실시간 키워드)")]
-    public List<Keyword> activeKeywords = new List<Keyword>();
+    public int currentHp;
+    public int currentLust;
 
     [Header("Combat State")]
-    public bool canAttack = false;          // 이번 턴 공격 가능 여부
-    public int attacksThisTurn = 0;         // 이번 턴 공격 횟수
-    public bool hasDivineShield = false;    // 천상의 보호막 활성화
-    public bool isStealthed = false;        // 은신 상태
-    public bool hasReborn = false;          // 환생 사용 가능
+    public bool canAttack = false;
 
-    [Header("State")]
+    [Header("Gaze System State")]
     public bool isArtRevealed = false;
     public bool isInfoRevealed = false;
 
-    [Header("Visual Groups")]
+    [Header("Visual Groups (가변 비주얼)")]
     public GameObject handVisual;
-    public GameObject fieldVisual;
+    public GameObject boardVisual;
 
-    [Header("Hand Visual References")]
-    public Image cardImage;
-    public Image elementImage;
-    public TMP_Text nameText;
-    public TMP_Text manaText;
-    public TMP_Text descriptionText;
-    public TMP_Text attackText;
-    public TMP_Text healthText;
+    [Header("Hand UI References")]
+    public Image handArt;
+    public TMP_Text handTitle;
+    public TMP_Text handMana;
+    public TMP_Text handAttack;
+    public TMP_Text handHp;
+    public TMP_Text handLust;
+    public GameObject handLustIcon;
 
-    [Header("Field Visual References")]
-    public Image fieldArt;
-    public Image fieldElement;
-    public TMP_Text fieldATK;
-    public TMP_Text fieldHP;
+    [Header("Board UI References")]
+    public Image boardArt;
+    public TMP_Text boardAttack;
+    public TMP_Text boardHp;
+    public GameObject boardTauntOverlay;
+    public GameObject boardStealthOverlay; // ★ 은신 오버레이 추가
 
-    [Header("Keyword Icons (선택)")]
-    public GameObject tauntIcon;
-    public GameObject divineShieldIcon;
-    public GameObject stealthIcon;
+    private Vector3 originalScale;
 
-    void Start()
-    {
-        InitializeFromData();
-        UpdateSourceZone();
-        UpdateCardUI();
-    }
+    void Awake() { originalScale = transform.localScale; }
 
-    /// <summary>
-    /// 카드 데이터로부터 초기화
-    /// </summary>
-    public void InitializeFromData()
-    {
-        if (cardData is MonsterCardData monster)
-        {
-            currentHealth = monster.health;
-            currentAttack = monster.attack;
-
-            // 기본 키워드 복사
-            activeKeywords.Clear();
-            activeKeywords.AddRange(monster.keywords);
-
-            // 특수 키워드 초기화
-            hasDivineShield = HasKeyword(Keyword.Divine);
-            isStealthed = HasKeyword(Keyword.Stealth);
-            hasReborn = HasKeyword(Keyword.Reborn);
-            canAttack = HasKeyword(Keyword.Charge); // 돌진 있으면 바로 공격 가능
-        }
-    }
-
-    /// <summary>
-    /// 구역에 따라 비주얼 전환
-    /// </summary>
-    public void UpdateSourceZone()
-    {
-        if (transform.parent == null) return;
-
-        DropZone dz = transform.parent.GetComponent<DropZone>();
-        if (dz != null)
-        {
-            bool isHand = (dz.zoneType == ZoneType.Hand);
-            if (handVisual != null) handVisual.SetActive(isHand);
-            if (fieldVisual != null) fieldVisual.SetActive(!isHand);
-
-            if (isHand)
-            {
-                isArtRevealed = true;
-                isInfoRevealed = true;
-            }
-        }
-    }
-
-    /// <summary>
-    /// UI 갱신
-    /// </summary>
-    public void UpdateCardUI()
+    public void Init(CardData cardData, bool ownedByPlayer)
     {
         if (cardData == null) return;
+        this.data = cardData;
+        this.isMine = ownedByPlayer;
 
-        Sprite targetArt = isArtRevealed 
-            ? (cardData.originalArt ?? cardData.censoredArt) 
-            : (cardData.censoredArt ?? cardData.originalArt);
+        // 실시간 스탯 초기화
+        currentAttack = data.attack;
+        currentHp = data.hp;
+        currentLust = data.lust_attack;
 
-        // 효과 설명 포함한 텍스트
-        string targetDesc = GetFullDescription();
-
-        // Hand Visual
-        if (handVisual != null && handVisual.activeSelf)
+        if (isMine)
         {
-            if (nameText != null) nameText.text = cardData.cardName;
-            if (manaText != null) manaText.text = cardData.manaCost.ToString();
-            if (cardImage != null) cardImage.sprite = targetArt;
-            if (descriptionText != null) descriptionText.text = targetDesc;
-            if (elementImage != null && iconData != null) 
-                elementImage.sprite = iconData.GetIcon(cardData.element);
+            isArtRevealed = true;
+            isInfoRevealed = true;
+            // ★ [추가] 돌진 키워드가 있다면 소환 즉시 공격 가능, 아니면 대기
+            canAttack = data.HasKeyword(Keyword.Charge);
+        }
 
-            if (cardData is MonsterCardData)
+        UpdateVisual();
+    }
+
+    public void UpdateVisual()
+    {
+        if (data == null) return;
+
+        // 1. 구역 확인
+        DropZone currentZone = GetComponentInParent<DropZone>();
+        bool isOnBoard = (currentZone != null && (currentZone.zoneType == ZoneType.PlayerField || currentZone.zoneType == ZoneType.EnemyField));
+
+        // 2. 비주얼 전환
+        if (handVisual != null) handVisual.SetActive(!isOnBoard);
+        if (boardVisual != null) boardVisual.SetActive(isOnBoard);
+
+        // 3. 일러스트 결정
+        Sprite targetArt = isArtRevealed ? data.art_full : (data.art_censored ?? data.art_full);
+
+        // 4. 손패 UI 갱신
+        if (!isOnBoard)
+        {
+            if (handArt != null) handArt.sprite = targetArt;
+            if (handTitle != null) handTitle.text = data.title;
+            if (handMana != null) handMana.text = data.mana.ToString();
+            if (handAttack != null) handAttack.text = currentAttack.ToString();
+            if (handHp != null) handHp.text = currentHp.ToString();
+            if (handLust != null)
             {
-                if (attackText != null) attackText.text = currentAttack.ToString();
-                if (healthText != null) healthText.text = currentHealth.ToString();
+                handLust.text = currentLust > 0 ? currentLust.ToString() : "";
+                if (handLustIcon != null) handLustIcon.SetActive(currentLust > 0);
             }
         }
-
-        // Field Visual
-        if (fieldVisual != null && fieldVisual.activeSelf)
+        // 5. 필드 UI 갱신
+        else
         {
-            if (fieldArt != null) fieldArt.sprite = targetArt;
-            if (fieldATK != null) fieldATK.text = currentAttack.ToString();
-            if (fieldHP != null) fieldHP.text = currentHealth.ToString();
-            if (fieldElement != null && iconData != null) 
-                fieldElement.sprite = iconData.GetIcon(cardData.element);
-        }
-
-        // 키워드 아이콘 업데이트
-        UpdateKeywordIcons();
-    }
-
-    /// <summary>
-    /// 전체 설명 텍스트 생성 (효과 포함)
-    /// </summary>
-    string GetFullDescription()
-    {
-        if (!isInfoRevealed)
-            return cardData.censoredDescription;
-
-        string baseDesc = cardData.description;
-
-        if (cardData is MonsterCardData monster)
-        {
-            string effectsDesc = monster.GetEffectsDescription();
-            if (!string.IsNullOrEmpty(effectsDesc))
+            if (boardArt != null)
             {
-                return effectsDesc + (string.IsNullOrEmpty(baseDesc) ? "" : "\n" + baseDesc);
+                boardArt.sprite = data.art_board ?? targetArt;
+                // ★ [추가] 공격 가능 여부 시각화 (녹색 테두리 등)
+                boardArt.color = (isMine && canAttack) ? Color.green : Color.white;
             }
-        }
+            if (boardAttack != null) boardAttack.text = currentAttack.ToString();
+            if (boardHp != null) boardHp.text = currentHp.ToString();
 
-        return baseDesc;
-    }
-
-    /// <summary>
-    /// 키워드 아이콘 표시 업데이트
-    /// </summary>
-    void UpdateKeywordIcons()
-    {
-        if (tauntIcon != null) tauntIcon.SetActive(HasKeyword(Keyword.Taunt));
-        if (divineShieldIcon != null) divineShieldIcon.SetActive(hasDivineShield);
-        if (stealthIcon != null) stealthIcon.SetActive(isStealthed);
-    }
-
-    // === 키워드 관리 ===
-
-    public bool HasKeyword(Keyword keyword)
-    {
-        return activeKeywords.Contains(keyword);
-    }
-
-    public void AddKeyword(Keyword keyword)
-    {
-        if (!activeKeywords.Contains(keyword))
-        {
-            activeKeywords.Add(keyword);
-
-            // 특수 키워드 처리
-            if (keyword == Keyword.Divine) hasDivineShield = true;
-            if (keyword == Keyword.Stealth) isStealthed = true;
-            if (keyword == Keyword.Reborn) hasReborn = true;
-
-            UpdateKeywordIcons();
+            // ★ [추가] 키워드 오버레이 처리 (도발/은신)
+            if (boardTauntOverlay != null) boardTauntOverlay.SetActive(data.HasKeyword(Keyword.Taunt));
+            if (boardStealthOverlay != null) boardStealthOverlay.SetActive(data.HasKeyword(Keyword.Stealth));
         }
     }
 
-    public void RemoveKeyword(Keyword keyword)
-    {
-        activeKeywords.Remove(keyword);
-        UpdateKeywordIcons();
-    }
-
-    // === 전투 관련 ===
-
-    /// <summary>
-    /// 소환 시 호출
-    /// </summary>
-    public void OnSummoned()
-    {
-        // 돌진이 없으면 소환 턴에 공격 불가
-        canAttack = HasKeyword(Keyword.Charge);
-        attacksThisTurn = 0;
-
-        // 소환 효과 발동
-        if (EffectManager.instance != null)
-        {
-            EffectManager.instance.TriggerEffects(this, EffectTiming.OnSummon);
-        }
-
-        Debug.Log($"{cardData.cardName} 소환됨! 공격 가능: {canAttack}");
-    }
-
-    /// <summary>
-    /// 턴 시작 시 호출
-    /// </summary>
+    // --- 전투 및 턴 로직 ---
     public void OnTurnStart()
     {
-        canAttack = true;
-        attacksThisTurn = 0;
+        if (isMine) canAttack = true;
 
-        // 턴 시작 효과 발동
+        // ★ [추가] 턴 시작 시 발동하는 효과 트리거
         if (EffectManager.instance != null)
-        {
             EffectManager.instance.TriggerEffects(this, EffectTiming.OnTurnStart);
-        }
+
+        UpdateVisual();
     }
 
-    /// <summary>
-    /// 공격 가능 횟수 반환
-    /// </summary>
-    public int GetMaxAttacksPerTurn()
-    {
-        return HasKeyword(Keyword.Windfury) ? 2 : 1;
-    }
+    public bool CanAttackNow() => canAttack && currentAttack > 0 && data.IsCharacter();
 
-    /// <summary>
-    /// 공격 가능 여부 확인
-    /// </summary>
-    public bool CanAttackNow()
-    {
-        if (!canAttack) return false;
-        if (attacksThisTurn >= GetMaxAttacksPerTurn()) return false;
-        return true;
-    }
-
-    /// <summary>
-    /// 공격 실행 시 호출
-    /// </summary>
     public void OnAttack(CardDisplay target)
     {
-        attacksThisTurn++;
+        canAttack = false;
 
-        // 은신 해제
-        if (isStealthed)
-        {
-            isStealthed = false;
-            RemoveKeyword(Keyword.Stealth);
-            Debug.Log($"{cardData.cardName}의 은신이 해제됨!");
-        }
-
-        // 공격 효과 발동
+        // ★ [추가] 공격 시 발동하는 효과 트리거
         if (EffectManager.instance != null)
-        {
             EffectManager.instance.TriggerEffects(this, EffectTiming.OnAttack, target);
-        }
+
+        UpdateVisual();
     }
 
-    /// <summary>
-    /// 데미지 받기
-    /// </summary>
     public void TakeDamage(int amount)
     {
-        // 천상의 보호막 체크
-        if (hasDivineShield && amount > 0)
-        {
-            hasDivineShield = false;
-            Debug.Log($"{cardData.cardName}의 천상의 보호막이 피해를 흡수!");
-            UpdateKeywordIcons();
-            return;
-        }
+        if (amount <= 0) return;
 
-        currentHealth -= amount;
-        Debug.Log($"{cardData.cardName}이(가) {amount}의 피해를 입음. 남은 체력: {currentHealth}");
+        currentHp -= amount;
+        Debug.Log($"{data.title}이(가) {amount} 피해를 입음.");
 
-        // 피해 효과 발동
+        // ★ [추가] 피해를 입었을 때 발동하는 효과 트리거
         if (EffectManager.instance != null)
-        {
-            var context = new EffectContext(this, EffectTiming.OnDamaged);
-            context.damageAmount = amount;
             EffectManager.instance.TriggerEffects(this, EffectTiming.OnDamaged);
-        }
 
-        if (currentHealth <= 0)
+        if (currentHp <= 0)
         {
             Die();
         }
-        else
-        {
-            UpdateCardUI();
-        }
+        else UpdateVisual();
     }
 
-    /// <summary>
-    /// 카드 파괴
-    /// </summary>
-    void Die()
+    private void Die()
     {
-        Debug.Log($"{cardData.cardName}이(가) 파괴되었습니다.");
-
-        // 죽음 효과 발동
+        // ★ [추가] 죽음 시 발동하는 효과 트리거
         if (EffectManager.instance != null)
-        {
             EffectManager.instance.TriggerEffects(this, EffectTiming.OnDeath);
-        }
 
-        // 환생 체크
-        if (hasReborn)
-        {
-            hasReborn = false;
-            currentHealth = 1;
-            Debug.Log($"{cardData.cardName}이(가) 환생했습니다!");
-            UpdateCardUI();
-            return;
-        }
-
-        // TODO: 파괴 애니메이션, 묘지로 이동 등
         Destroy(gameObject);
     }
 
-    // === 클릭 이벤트 ===
-
+    // --- 마우스 상호작용 ---
     public void OnPointerClick(PointerEventData eventData)
     {
-        // 릴리스 모드일 때
-        if (ReleaseManager.instance != null && ReleaseManager.instance.IsInReleaseMode())
-        {
-            if (ReleaseManager.instance.TryReleaseCard(this))
-            {
-                return; // 릴리스 성공
-            }
-            // 릴리스 불가한 카드면 계속 진행
-        }
-
-        // 타겟 선택 모드일 때
+        // 타겟 선택 모드 우선 처리
         if (EffectManager.instance != null && EffectManager.instance.IsWaitingForTarget())
         {
             EffectManager.instance.OnTargetSelected(this);
             return;
         }
 
-        // [수정됨] 통합 매니저의 줌 기능 호출
+        // 일반 클릭: 카드 확대
         if (GameUIManager.instance != null)
-        {
             GameUIManager.instance.ShowCardZoom(this);
-        }
     }
 
-
-    /// <summary>
-    /// 마우스 오버 시 릴리스 미리보기 (선택적 구현)
-    /// </summary>
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        if (ReleaseManager.instance != null && ReleaseManager.instance.CanBeReleased(this))
-        {
-            int previewMana = ReleaseManager.instance.PreviewManaRecovery(this);
-            Debug.Log($"릴리스 시 마나 +{previewMana}");
-            // TODO: 툴팁 표시
-        }
-    }
+    public void OnPointerEnter(PointerEventData eventData) { transform.localScale = originalScale * 1.05f; }
+    public void OnPointerExit(PointerEventData eventData) { transform.localScale = originalScale; }
 }

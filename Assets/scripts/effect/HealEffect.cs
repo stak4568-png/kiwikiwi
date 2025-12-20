@@ -9,22 +9,14 @@ public class HealEffect : CardEffect
 
     public override void Execute(EffectContext context)
     {
-        if (context.isCancelled) return;
-
         switch (targetType)
         {
             case EffectTarget.Self:
-                if (context.sourceCard != null)
-                {
-                    HealCard(context.sourceCard);
-                }
+                if (context.sourceCard != null) HealCard(context.sourceCard);
                 break;
 
             case EffectTarget.SingleAlly:
-                if (context.targetCard != null)
-                {
-                    HealCard(context.targetCard);
-                }
+                if (context.targetCard != null) HealCard(context.targetCard);
                 break;
 
             case EffectTarget.AllAllies:
@@ -32,7 +24,6 @@ public class HealEffect : CardEffect
                 break;
 
             case EffectTarget.PlayerHero:
-                // 수정됨: GameManager의 변수 대신 HeroPortrait의 Heal 메서드 사용
                 if (HeroPortrait.playerHero != null)
                 {
                     HeroPortrait.playerHero.Heal(healAmount);
@@ -44,17 +35,21 @@ public class HealEffect : CardEffect
 
     void HealCard(CardDisplay card)
     {
-        if (card.cardData is MonsterCardData monster)
+        // ★ 수정 포인트: data.IsCharacter() 체크 ★
+        if (card.data != null && card.data.IsCharacter())
         {
-            int maxHealth = monster.health;
-            int newHealth = card.currentHealth + healAmount;
+            int maxHealth = card.data.hp; // CardData의 기본 체력
+            int newHealth = card.currentHp + healAmount; // CardDisplay의 현재 체력
 
             if (!canOverheal && newHealth > maxHealth)
                 newHealth = maxHealth;
 
-            card.currentHealth = newHealth;
-            card.UpdateCardUI();
-            Debug.Log($"[효과] {effectName}: {card.cardData.cardName} 체력 {healAmount} 회복! (현재: {card.currentHealth})");
+            card.currentHp = newHealth;
+
+            // ★ 수정 포인트: UpdateVisual() 호출 ★
+            card.UpdateVisual();
+
+            Debug.Log($"[효과] {effectName}: {card.data.title} 체력 {healAmount} 회복! (현재: {card.currentHp})");
         }
     }
 
@@ -73,18 +68,5 @@ public class HealEffect : CardEffect
                 break;
             }
         }
-    }
-
-    public override string GetDescription()
-    {
-        string targetStr = targetType switch
-        {
-            EffectTarget.Self => "자신의",
-            EffectTarget.SingleAlly => "아군 하나의",
-            EffectTarget.AllAllies => "모든 아군의",
-            EffectTarget.PlayerHero => "영웅의",
-            _ => ""
-        };
-        return $"{targetStr} 체력을 {healAmount} 회복합니다.";
     }
 }

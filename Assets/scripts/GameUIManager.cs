@@ -5,7 +5,7 @@ using System;
 using System.Collections;
 
 // GameUI 상태 정의
-public enum GameUIState { None, CardZoom, SeduceEvent, ClimaxEvent }
+public enum GameUIState { None, CardZoom, SeduceEvent, ClimaxEvent, ClimaxResolution }
 
 public class GameUIManager : MonoBehaviour
 {
@@ -15,11 +15,11 @@ public class GameUIManager : MonoBehaviour
     public GameUIState currentState = GameUIState.None;
 
     [Header("1. Common UI References")]
-    public GameObject uiRoot;
-    public Image overlayBackground;
-    public Image mainIllustration;
-    public TMP_Text titleText;
-    public TMP_Text descriptionText;
+    public GameObject uiRoot;            // 전체 UI 루트 패널
+    public Image overlayBackground;      // 암전용 배경 이미지
+    public Image mainIllustration;       // 중앙 큰 일러스트
+    public TMP_Text titleText;           // 이름/제목
+    public TMP_Text descriptionText;     // 설명 및 대사창
 
     [Header("2. Seduce Event Group")]
     public GameObject seduceButtonGroup;
@@ -28,9 +28,9 @@ public class GameUIManager : MonoBehaviour
     public TMP_Text blockButtonText;
 
     [Header("3. Climax & Choice Group")]
-    public GameObject climaxButtonGroup;
+    public GameObject climaxButtonGroup; // Next 버튼 포함 그룹
     public Button nextButton;
-    public GameObject choiceGroup;
+    public GameObject choiceGroup;       // 수락/거절 버튼 부모 그룹
     public Button acceptButton;
     public Button rejectButton;
     public TMP_Text acceptText;
@@ -42,8 +42,8 @@ public class GameUIManager : MonoBehaviour
     public GameObject gazeButtonGroup;
 
     [Header("Background Settings")]
-    public float zoomDimAlpha = 0.4f;
-    public float eventDimAlpha = 0.9f;
+    public float zoomDimAlpha = 0.4f;    // 줌일 때 배경 투명도
+    public float eventDimAlpha = 0.9f;   // 이벤트일 때 배경 투명도
 
     private Action onEventComplete;
     private int dialogueIndex = 0;
@@ -73,6 +73,7 @@ public class GameUIManager : MonoBehaviour
         currentZoomedCard = null;
     }
 
+    // 배경 클릭 (줌 모드에서만 작동)
     public void OnBackgroundClick()
     {
         if (currentState == GameUIState.CardZoom)
@@ -91,36 +92,47 @@ public class GameUIManager : MonoBehaviour
         }
     }
 
-    // --- [유혹 이벤트] ---
-    public void ShowSeduceEvent(string name, Sprite art, int lustAtk, Action callback)
+    // --- [기능 1] 유혹 이벤트 (영웅/하수인 공통 사용) ---
+    // ★ 에러 해결: 인자를 4개 받는 오버로드 버전 ★
+    public void ShowSeduceEvent(string name, Sprite art, int lustAtk, int manaDef, Action callback)
     {
         CloseAllUI();
         currentState = GameUIState.SeduceEvent;
         onEventComplete = callback;
+
         uiRoot.SetActive(true);
         seduceButtonGroup.SetActive(true);
         SetBackgroundAlpha(eventDimAlpha);
+
         titleText.text = name;
         mainIllustration.sprite = art;
-        descriptionText.text = $"{name}의 유혹 공격!\n({lustAtk} Lust)";
-        blockButtonText.text = $"마나로 저항\n(보유 마나: {GameManager.instance.currentMana})";
+        descriptionText.text = $"{name}의 유혹! \n(피해: {lustAtk} Lust / 방어 비용: {manaDef} Mana)";
+
+        // [방어 버튼 설정]
+        int currentMana = GameManager.instance.playerCurrentMana;
+        bool canAfford = currentMana >= manaDef;
+
+        blockButtonText.text = $"마나로 방어\n({manaDef} 소모 / 보유: {currentMana})";
+        blockButton.interactable = canAfford; // 마나가 부족하면 버튼 비활성화
 
         blockButton.onClick.RemoveAllListeners();
         blockButton.onClick.AddListener(() => {
-            int mana = GameManager.instance.currentMana;
-            HeroPortrait.playerHero.TakeLustDamage(Mathf.Max(0, lustAtk - mana), true);
-            GameManager.instance.TrySpendMana(mana);
+            // 정해진 방어 마나만 소모하고 데미지는 0
+            GameManager.instance.TrySpendMana(manaDef);
+            HeroPortrait.playerHero.TakeLustDamage(0, true);
             FinishEvent();
         });
 
+        // [인내(그냥 맞기) 버튼 설정]
         endureButton.onClick.RemoveAllListeners();
         endureButton.onClick.AddListener(() => {
+            // 마나는 아끼고 유혹 데미지를 그대로 받음
             HeroPortrait.playerHero.TakeLustDamage(lustAtk, true);
             FinishEvent();
         });
     }
 
-    // --- [클라이맥스 이벤트] ---
+    // --- [기능 2] 클라이맥스 이벤트 ---
     public void ShowClimaxEvent(ClimaxEventData data)
     {
         CloseAllUI();
@@ -128,24 +140,29 @@ public class GameUIManager : MonoBehaviour
         currentClimaxData = data;
         dialogueIndex = 0;
 
-        uiRoot.SetActive(true);
-        climaxButtonGroup.SetActive(true);
-        nextButton.gameObject.SetActive(true);
-        choiceGroup.SetActive(false);
+        if (uiRoot != null) uiRoot.SetActive(true);
+        if (climaxButtonGroup != null) climaxButtonGroup.SetActive(true);
+        if (nextButton != null) nextButton.gameObject.SetActive(true);
+        if (choiceGroup != null) choiceGroup.SetActive(false);
         SetBackgroundAlpha(eventDimAlpha);
-        titleText.text = data.eventTitle;
-        mainIllustration.sprite = data.climaxIllustration;
+
+        if (titleText != null) titleText.text = data.eventTitle;
+        if (mainIllustration != null) mainIllustration.sprite = data.climaxIllustration;
 
         ShowNextDialogue();
-        nextButton.onClick.RemoveAllListeners();
-        nextButton.onClick.AddListener(ShowNextDialogue);
+        if (nextButton != null)
+        {
+            nextButton.onClick.RemoveAllListeners();
+            nextButton.onClick.AddListener(ShowNextDialogue);
+        }
     }
 
     void ShowNextDialogue()
     {
         if (dialogueIndex < currentClimaxData.dialogueLines.Length)
         {
-            descriptionText.text = currentClimaxData.dialogueLines[dialogueIndex];
+            if (descriptionText != null)
+                descriptionText.text = currentClimaxData.dialogueLines[dialogueIndex];
             dialogueIndex++;
         }
         else
@@ -156,49 +173,61 @@ public class GameUIManager : MonoBehaviour
 
     void ShowFinalChoices()
     {
-        nextButton.gameObject.SetActive(false);
-        choiceGroup.SetActive(true);
-        acceptText.text = currentClimaxData.acceptButtonText;
-        rejectText.text = currentClimaxData.rejectButtonText;
+        if (nextButton != null) nextButton.gameObject.SetActive(false);
+        if (choiceGroup != null) choiceGroup.SetActive(true);
 
-        acceptButton.onClick.RemoveAllListeners();
-        acceptButton.onClick.AddListener(() => StartResolution(true));
+        if (acceptText != null) acceptText.text = currentClimaxData.acceptButtonText;
+        if (rejectText != null) rejectText.text = currentClimaxData.rejectButtonText;
 
-        rejectButton.onClick.RemoveAllListeners();
-        rejectButton.onClick.AddListener(() => StartResolution(false));
+        if (acceptButton != null)
+        {
+            acceptButton.onClick.RemoveAllListeners();
+            acceptButton.onClick.AddListener(() => StartResolution(true));
+        }
+
+        if (rejectButton != null)
+        {
+            rejectButton.onClick.RemoveAllListeners();
+            rejectButton.onClick.AddListener(() => StartResolution(false));
+        }
     }
 
     void StartResolution(bool isAccept)
     {
-        choiceGroup.SetActive(false);
-        nextButton.gameObject.SetActive(true);
+        if (choiceGroup != null) choiceGroup.SetActive(false);
+        if (nextButton != null) nextButton.gameObject.SetActive(true);
+        currentState = GameUIState.ClimaxResolution;
         resolutionIndex = 0;
 
         if (isAccept)
         {
-            mainIllustration.sprite = currentClimaxData.acceptArt ?? currentClimaxData.climaxIllustration;
+            if (mainIllustration != null) mainIllustration.sprite = currentClimaxData.acceptArt ?? currentClimaxData.climaxIllustration;
             resolutionDialogues = currentClimaxData.acceptDialogues;
             HeroPortrait.playerHero.ReduceLust(currentClimaxData.acceptLustReduction);
             GameManager.instance.SetManaLock(currentClimaxData.acceptManaLockTurns);
         }
         else
         {
-            mainIllustration.sprite = currentClimaxData.rejectArt ?? currentClimaxData.climaxIllustration;
+            if (mainIllustration != null) mainIllustration.sprite = currentClimaxData.rejectArt ?? currentClimaxData.climaxIllustration;
             resolutionDialogues = currentClimaxData.rejectDialogues;
             HeroPortrait.playerHero.ReduceLust(currentClimaxData.rejectLustReduction);
             GameManager.instance.SetManaLock(currentClimaxData.rejectManaLockTurns);
         }
 
         ShowNextResolutionDialogue();
-        nextButton.onClick.RemoveAllListeners();
-        nextButton.onClick.AddListener(ShowNextResolutionDialogue);
+        if (nextButton != null)
+        {
+            nextButton.onClick.RemoveAllListeners();
+            nextButton.onClick.AddListener(ShowNextResolutionDialogue);
+        }
     }
 
     void ShowNextResolutionDialogue()
     {
         if (resolutionIndex < resolutionDialogues.Length)
         {
-            descriptionText.text = resolutionDialogues[resolutionIndex];
+            if (descriptionText != null)
+                descriptionText.text = resolutionDialogues[resolutionIndex];
             resolutionIndex++;
         }
         else
@@ -207,9 +236,10 @@ public class GameUIManager : MonoBehaviour
         }
     }
 
-    // --- [카드 줌] ---
+    // --- [기능 3] 카드 확대 보기 (시선 시스템) ---
     public void ShowCardZoom(CardDisplay card)
     {
+        // 이미 다른 이벤트 중이면 줌 불가 (단, 줌 상태에서 리프레시는 허용)
         if (currentState != GameUIState.None && currentState != GameUIState.CardZoom) return;
 
         bool isRefreshing = (currentState == GameUIState.CardZoom);
@@ -217,23 +247,23 @@ public class GameUIManager : MonoBehaviour
         {
             CloseAllUI();
             currentState = GameUIState.CardZoom;
-            uiRoot.SetActive(true);
-            zoomStatsGroup.SetActive(true);
+            if (uiRoot != null) uiRoot.SetActive(true);
+            if (zoomStatsGroup != null) zoomStatsGroup.SetActive(true);
             SetBackgroundAlpha(zoomDimAlpha);
         }
 
         currentZoomedCard = card;
-        titleText.text = card.cardData.cardName;
-        mainIllustration.sprite = card.isArtRevealed ? card.cardData.originalArt : card.cardData.censoredArt;
-        descriptionText.text = card.isInfoRevealed ? card.cardData.description : card.cardData.censoredDescription;
+        if (titleText != null) titleText.text = card.data.title;
+        if (mainIllustration != null)
+            mainIllustration.sprite = card.isArtRevealed ? card.data.art_full : (card.data.art_censored ?? card.data.art_full);
+        if (descriptionText != null)
+            descriptionText.text = card.isInfoRevealed ? card.data.text : (card.data.text_censored ?? "해금되지 않은 정보입니다.");
 
-        if (card.cardData is MonsterCardData monster)
-            statsText.text = $"{monster.attack} / {monster.health}";
-        else
-            statsText.text = "";
+        if (statsText != null)
+            statsText.text = $"{card.currentAttack} / {card.currentHp}";
 
         if (gazeButtonGroup != null)
-            gazeButtonGroup.SetActive(card.transform.parent?.GetComponent<DropZone>()?.zoneType == ZoneType.EnemyField);
+            gazeButtonGroup.SetActive(!card.isMine); // 적 카드일 때만 시선 버튼 활성화
     }
 
     public void OnClickAppreciate()
@@ -258,8 +288,8 @@ public class GameUIManager : MonoBehaviour
     {
         if (currentZoomedCard)
         {
-            currentZoomedCard.UpdateCardUI();
-            ShowCardZoom(currentZoomedCard);
+            currentZoomedCard.UpdateVisual(); // 필드 카드 갱신
+            ShowCardZoom(currentZoomedCard);  // 확대창 갱신
         }
     }
 
@@ -269,4 +299,4 @@ public class GameUIManager : MonoBehaviour
         onEventComplete?.Invoke();
         onEventComplete = null;
     }
-} // 클래스 닫기
+}

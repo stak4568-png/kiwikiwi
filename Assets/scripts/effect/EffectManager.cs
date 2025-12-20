@@ -1,6 +1,3 @@
-// EffectManager.cs
-// 효과 실행을 중앙에서 관리하는 매니저
-
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -8,7 +5,6 @@ public class EffectManager : MonoBehaviour
 {
     public static EffectManager instance;
 
-    // 타겟 선택 대기 상태
     private bool isWaitingForTarget = false;
     private CardEffect pendingEffect;
     private EffectContext pendingContext;
@@ -20,16 +16,18 @@ public class EffectManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 특정 타이밍에 해당하는 모든 효과 발동
+    /// 특정 타이밍에 해당하는 카드의 모든 효과 발동
     /// </summary>
     public void TriggerEffects(CardDisplay card, EffectTiming timing, CardDisplay target = null)
     {
-        if (card == null || card.cardData == null) return;
+        // ★ 수정 포인트: cardData -> data ★
+        if (card == null || card.data == null) return;
 
-        // MonsterCardData의 효과 리스트 가져오기
-        if (card.cardData is MonsterCardData monster && monster.effects != null)
+        // CardData 에 정의된 효과 리스트를 순회
+        // (CardData.cs에 public List<CardEffect> effects 변수가 있어야 함)
+        if (card.data.effects != null)
         {
-            foreach (CardEffect effect in monster.effects)
+            foreach (CardEffect effect in card.data.effects)
             {
                 if (effect != null && effect.timing == timing)
                 {
@@ -39,9 +37,6 @@ public class EffectManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// 단일 효과 실행
-    /// </summary>
     public void ExecuteEffect(CardEffect effect, CardDisplay source, CardDisplay target = null)
     {
         if (effect == null) return;
@@ -49,106 +44,45 @@ public class EffectManager : MonoBehaviour
         EffectContext context = new EffectContext(source, effect.timing);
         context.targetCard = target;
 
-        // 발동 가능 체크
-        if (!effect.CanExecute(context))
-        {
-            Debug.Log($"[효과 불발] {effect.effectName}: 조건 미충족");
-            return;
-        }
-
-        // 타겟 선택이 필요한 효과인지 체크
+        // 타겟 선택이 필요한지 체크
         if (NeedsTargetSelection(effect.targetType) && target == null)
         {
-            // 타겟 선택 모드 진입
             StartTargetSelection(effect, context);
             return;
         }
 
-        // 비용 소모
-        if (effect.manaCost > 0)
-            GameManager.instance.TrySpendMana(effect.manaCost);
-        if (effect.focusCost > 0)
-            GameManager.instance.TryUseFocus();
-
-        // 효과 실행
         effect.Execute(context);
     }
 
-    /// <summary>
-    /// 타겟 선택이 필요한 효과 타입인지 확인
-    /// </summary>
     bool NeedsTargetSelection(EffectTarget targetType)
     {
-        return targetType == EffectTarget.SingleEnemy ||
-               targetType == EffectTarget.SingleAlly;
+        return targetType == EffectTarget.SingleEnemy || targetType == EffectTarget.SingleAlly;
     }
 
-    /// <summary>
-    /// 타겟 선택 모드 시작
-    /// </summary>
     void StartTargetSelection(CardEffect effect, EffectContext context)
     {
         isWaitingForTarget = true;
         pendingEffect = effect;
         pendingContext = context;
         Debug.Log($"[타겟 선택] {effect.effectName}의 대상을 선택하세요.");
-        // TODO: UI에서 선택 가능한 카드 하이라이트
     }
 
-    /// <summary>
-    /// 타겟 선택 완료 시 호출 (카드 타겟)
-    /// </summary>
     public void OnTargetSelected(CardDisplay target)
     {
         if (!isWaitingForTarget || pendingEffect == null) return;
-
         pendingContext.targetCard = target;
-
-        // 유효한 타겟인지 체크
-        if (IsValidTarget(pendingEffect.targetType, target))
-        {
-            pendingEffect.Execute(pendingContext);
-        }
-        else
-        {
-            Debug.Log("[타겟 선택] 유효하지 않은 대상입니다.");
-        }
-
+        pendingEffect.Execute(pendingContext);
         CancelTargetSelection();
     }
 
-    /// <summary>
-    /// 영웅 타겟 선택 완료 시 호출
-    /// </summary>
     public void OnHeroTargetSelected(HeroPortrait targetHero)
     {
         if (!isWaitingForTarget || pendingEffect == null) return;
-
-        // 영웅 타겟 유효성 체크
-        bool isValid = false;
-        if (pendingEffect.targetType == EffectTarget.EnemyHero && !targetHero.isPlayerHero)
-            isValid = true;
-        else if (pendingEffect.targetType == EffectTarget.PlayerHero && targetHero.isPlayerHero)
-            isValid = true;
-        else if (pendingEffect.targetType == EffectTarget.SingleEnemy && !targetHero.isPlayerHero)
-            isValid = true;  // 적 하수인 또는 적 영웅 선택 가능
-
-        if (isValid)
-        {
-            pendingContext.targetHero = targetHero;
-            pendingEffect.Execute(pendingContext);
-        }
-        else
-        {
-            Debug.Log("[타겟 선택] 유효하지 않은 대상입니다.");
-        }
-
+        pendingContext.targetHero = targetHero;
+        pendingEffect.Execute(pendingContext);
         CancelTargetSelection();
     }
 
-    /// <summary>
-    /// 타겟 선택 취소
-    /// </summary>
     public void CancelTargetSelection()
     {
         isWaitingForTarget = false;
@@ -156,34 +90,9 @@ public class EffectManager : MonoBehaviour
         pendingContext = null;
     }
 
-    /// <summary>
-    /// 유효한 타겟인지 확인
-    /// </summary>
-    bool IsValidTarget(EffectTarget targetType, CardDisplay target)
-    {
-        if (target == null) return false;
-
-        DropZone zone = target.transform.parent?.GetComponent<DropZone>();
-        if (zone == null) return false;
-
-        return targetType switch
-        {
-            EffectTarget.SingleEnemy => zone.zoneType == ZoneType.EnemyField,
-            EffectTarget.SingleAlly => zone.zoneType == ZoneType.PlayerField,
-            _ => true
-        };
-    }
-
-    /// <summary>
-    /// 현재 타겟 선택 대기 중인지 확인
-    /// </summary>
     public bool IsWaitingForTarget() => isWaitingForTarget;
 
-    // === 전역 이벤트 트리거 (턴 시작/종료 등) ===
-
-    /// <summary>
-    /// 필드의 모든 카드에 타이밍 이벤트 발동
-    /// </summary>
+    // 전역 타이밍 트리거 (턴 시작/종료 등)
     public void TriggerGlobalTiming(EffectTiming timing, ZoneType zone)
     {
         DropZone[] zones = FindObjectsByType<DropZone>(FindObjectsSortMode.None);

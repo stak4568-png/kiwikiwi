@@ -12,43 +12,44 @@ public class ReleaseBonusEffect : CardEffect
 
     public override void Execute(EffectContext context)
     {
-        if (context.sourceCard == null) return;
+        if (context.sourceCard == null || context.sourceCard.data == null) return;
 
-        Debug.Log($"[릴리스 보너스] {context.sourceCard.cardData.cardName}의 릴리스 효과 발동!");
+        // ★ 수정 포인트: cardData.cardName -> data.title ★
+        Debug.Log($"[릴리스 보너스] {context.sourceCard.data.title}의 릴리스 효과 발동!");
 
-        // 1. 추가 마나 회복 (GameManager 담당)
+        // 1. 추가 마나 회복
         if (bonusMana > 0 && GameManager.instance != null)
         {
             GameManager.instance.GainMana(bonusMana);
         }
 
-        // 2. 추가 집중력 회복 (GameManager 담당)
+        // 2. 추가 집중력 회복
         if (bonusFocus > 0 && GameManager.instance != null)
         {
             GameManager.instance.GainFocus(bonusFocus);
         }
 
-        // 3. 추가 드로우 (DeckManager 담당)
+        // 3. 추가 드로우
         if (bonusDraw > 0 && DeckManager.instance != null)
         {
             for (int i = 0; i < bonusDraw; i++)
             {
-                DeckManager.instance.DrawCard();
+                // ★ 인자로 true를 넣어 플레이어가 카드를 뽑도록 합니다.
+                DeckManager.instance.DrawCard(true);
             }
+            Debug.Log($"  → 카드 {bonusDraw}장 드로우 보너스");
         }
 
-        // 4. 적 영웅 데미지 (수정됨: HeroPortrait.enemyHero 직접 참조)
+        // 4. 적 영웅 데미지
         if (damageToEnemy > 0 && HeroPortrait.enemyHero != null)
         {
             HeroPortrait.enemyHero.TakeDamage(damageToEnemy);
-            Debug.Log($"  → 적 영웅에게 {damageToEnemy} 데미지");
         }
 
-        // 5. 플레이어 체력 회복 (수정됨: HeroPortrait.playerHero 직접 참조)
+        // 5. 플레이어 체력 회복
         if (healPlayer > 0 && HeroPortrait.playerHero != null)
         {
             HeroPortrait.playerHero.Heal(healPlayer);
-            Debug.Log($"  → 플레이어 {healPlayer} 회복");
         }
     }
 

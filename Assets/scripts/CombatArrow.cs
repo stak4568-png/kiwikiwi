@@ -1,14 +1,14 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
-using UnityEngine.InputSystem; // ★ 새로운 입력 시스템을 사용하기 위해 추가
+using UnityEngine.InputSystem; // New Input System 사용 시 필수
 
 public class CombatArrow : MonoBehaviour
 {
     public static CombatArrow instance;
 
-    public RectTransform arrowhead;
-    public RectTransform dotsContainer;
+    public RectTransform arrowhead;      // 화살표 머리
+    public RectTransform dotsContainer;  // 점들을 담은 부모
     private List<RectTransform> dots = new List<RectTransform>();
 
     private Vector2 startPoint;
@@ -18,6 +18,7 @@ public class CombatArrow : MonoBehaviour
     {
         if (instance == null) instance = this;
 
+        // 점들 초기화 및 클릭 방지(Raycast Target OFF)
         foreach (RectTransform child in dotsContainer)
         {
             dots.Add(child);
@@ -32,6 +33,7 @@ public class CombatArrow : MonoBehaviour
     {
         gameObject.SetActive(true);
         startPoint = startPos;
+        // 화살표가 모든 UI의 최상단에 보이도록 설정
         transform.SetAsLastSibling();
     }
 
@@ -44,13 +46,18 @@ public class CombatArrow : MonoBehaviour
     {
         if (!gameObject.activeSelf) return;
 
-        // ★ Old: Input.mousePosition
-        // ★ New: Mouse.current.position.ReadValue()
+        // 마우스 현재 위치 가져오기 (New Input System 방식)
+        Vector2 mousePos = Vector2.zero;
         if (Mouse.current != null)
         {
-            Vector2 mousePos = Mouse.current.position.ReadValue();
-            UpdateBezierArrow(mousePos);
+            mousePos = Mouse.current.position.ReadValue();
         }
+        else
+        {
+            mousePos = Input.mousePosition; // 구형 시스템 백업
+        }
+
+        UpdateBezierArrow(mousePos);
     }
 
     void UpdateBezierArrow(Vector2 endPoint)
@@ -64,12 +71,13 @@ public class CombatArrow : MonoBehaviour
             Vector2 pos = GetBezierPoint(startPoint, controlPoint, endPoint, t);
             dots[i].position = pos;
 
-            float scale = Mathf.Lerp(0.5f, 1.0f, t);
+            float scale = Mathf.Lerp(0.4f, 0.8f, t);
             dots[i].localScale = new Vector3(scale, scale, 1f);
         }
 
         arrowhead.position = endPoint;
 
+        // 머리 회전 각도 계산
         Vector2 lastDotPos = GetBezierPoint(startPoint, controlPoint, endPoint, 0.95f);
         Vector2 direction = endPoint - lastDotPos;
         float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;

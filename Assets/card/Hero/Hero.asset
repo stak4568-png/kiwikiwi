@@ -12,16 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e4e50f7080775ac49a9aa7c10b2ebe5b, type: 3}
   m_Name: Hero
   m_EditorClassIdentifier: Assembly-CSharp::HeroData
-  heroId: iam
-  heroName: "\uC8FC\uC778\uACF5"
-  description: "\uC5E3 \uC640\uD0C0\uC2DC?"
-  portrait: {fileID: 2771843657865904717, guid: 43a86646cd25a0e498a868ab5c36b56b, type: 3}
-  portraitDamaged: {fileID: 2771843657865904717, guid: 43a86646cd25a0e498a868ab5c36b56b, type: 3}
-  portraitSeduced: {fileID: 2771843657865904717, guid: 43a86646cd25a0e498a868ab5c36b56b, type: 3}
+  title: "\uC8FC\uC778\uACF5"
+  art_full: {fileID: 2771843657865904717, guid: 43a86646cd25a0e498a868ab5c36b56b, type: 3}
+  art_seduced: {fileID: 0}
+  seduce_event_art: {fileID: 0}
   maxHealth: 30
   startingArmor: 0
+  startingWeapon: {fileID: 0}
   heroPower: {fileID: 0}
   canSeduceAttack: 0
   seducePower: 5
+  mana_defense: 2
   seduceDescription: 
-  startingWeapon: {fileID: 0}
+  climax_data: {fileID: 0}

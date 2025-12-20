@@ -6,189 +6,154 @@ public class Draggable : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDra
 {
     [HideInInspector] public Transform parentToReturnTo = null;
     [HideInInspector] public ZoneType sourceZone;
+
     private CanvasGroup canvasGroup;
+    private CardDisplay cardDisplay;
 
     void Awake()
     {
         canvasGroup = GetComponent<CanvasGroup>();
+        cardDisplay = GetComponent<CardDisplay>();
     }
 
-    // 1. �巡�� ����
+    // 1. 드래그 시작
     public void OnBeginDrag(PointerEventData eventData)
     {
-        // ���� ���� ��� �Ҽ����� Ȯ��
+        // 내 턴이 아니면 드래그 불가
+        if (GameManager.instance.isEnemyTurn) return;
+
         parentToReturnTo = this.transform.parent;
         DropZone dz = parentToReturnTo.GetComponent<DropZone>();
         if (dz != null) sourceZone = dz.zoneType;
 
-        // [A] �ʵ忡 �ִ� ī����: ���� ȭ��ǥ ���
+        // [A] 필드에 있는 아군 카드: 공격 화살표 표시
         if (sourceZone == ZoneType.PlayerField)
         {
-            if (CombatArrow.instance != null)
+            if (cardDisplay != null && cardDisplay.CanAttackNow() && cardDisplay.isMine)
             {
-                CombatArrow.instance.Show(transform.position);
+                if (CombatArrow.instance != null)
+                {
+                    CombatArrow.instance.Show(transform.position);
+                }
             }
         }
-        // [B] ���п� �ִ� ī����: ī�� ��ȯ �̵� ���
+        // [B] 손패에 있는 카드: 소환을 위한 드래그
         else if (sourceZone == ZoneType.Hand)
         {
+            // 드래그 중에는 다른 UI 레이캐스트를 방해하지 않도록 설정
             this.transform.SetParent(this.transform.parent.parent);
             if (canvasGroup != null) canvasGroup.blocksRaycasts = false;
         }
     }
 
-    // 2. �巡�� ��
+    // 2. 드래그 중
     public void OnDrag(PointerEventData eventData)
     {
-        // ������ ���� ī�� �̹����� ���콺�� ����ٴ�
+        if (GameManager.instance.isEnemyTurn) return;
+
+        // 손패 카드일 때만 마우스를 따라 움직임 (필드 카드는 화살표가 움직임)
         if (sourceZone == ZoneType.Hand)
         {
             this.transform.position = eventData.position;
         }
-        // ȭ��ǥ ����� ���� CombatArrow ��ũ��Ʈ�� ������ Update���� ���콺�� �Ѿư��ϴ�.
     }
 
-    // 3. �巡�� ����
+    // 3. 드래그 종료
     public void OnEndDrag(PointerEventData eventData)
     {
-        // [A] �ʵ� ���� ��� ����
+        if (GameManager.instance.isEnemyTurn) return;
+
+        // [A] 필드 공격 드래그 종료
         if (sourceZone == ZoneType.PlayerField)
         {
             if (CombatArrow.instance != null) CombatArrow.instance.Hide();
 
-            // ���콺�� ���� ������ ���� �ִ��� Ȯ��
+            // 타겟 체크 및 전투 실행
             CheckCombatTarget(eventData);
         }
-        // [B] ���� ��ȯ ��� ����
+        // [B] 손패 소환 드래그 종료
         else
         {
             this.transform.SetParent(parentToReturnTo);
             if (canvasGroup != null) canvasGroup.blocksRaycasts = true;
 
-            // ���־� ������Ʈ (Hand -> Field ����)
-            CardDisplay cd = GetComponent<CardDisplay>();
-            if (cd != null)
-            {
-                cd.UpdateSourceZone();
-                cd.UpdateCardUI();
-            }
+            // 드롭 후 비주얼 갱신 (모양 변경 등)
+            if (cardDisplay != null) cardDisplay.UpdateVisual();
         }
     }
 
-    // --- 전투 타겟 체크 ---
+    // --- 전투 타겟팅 로직 ---
 
     void CheckCombatTarget(PointerEventData eventData)
     {
-        CardDisplay attacker = GetComponent<CardDisplay>();
-        if (attacker == null) return;
+        if (cardDisplay == null || !cardDisplay.CanAttackNow()) return;
 
-        // 공격 가능 체크
-        if (!attacker.CanAttackNow())
-        {
-            Debug.Log("이 하수인은 지금 공격할 수 없습니다!");
-            return;
-        }
-
-        // 마우스 위치 아래의 모든 UI를 레이캐스트로 검사
+        // 마우스 아래의 모든 UI 검사
         List<RaycastResult> results = new List<RaycastResult>();
         EventSystem.current.RaycastAll(eventData, results);
 
         foreach (RaycastResult result in results)
         {
-            // 1. 적 영웅 초상화 체크
+            // 1. 적 영웅 타겟팅
             HeroPortrait targetHero = result.gameObject.GetComponentInParent<HeroPortrait>();
             if (targetHero != null && !targetHero.isPlayerHero)
             {
-                // 도발 체크
+                // 도발 하수인 체크
                 if (HasTauntOnEnemyField())
                 {
-                    Debug.Log("도발 하수인을 먼저 처치해야 합니다!");
+                    Debug.Log("도발 하수인이 앞을 가로막고 있습니다!");
                     return;
                 }
 
-                // 영웅 공격 실행
-                ExecuteHeroAttack(attacker, targetHero);
+                ExecuteHeroAttack(cardDisplay, targetHero);
                 return;
             }
 
-            // 2. 적 카드 체크
+            // 2. 적 하수인 타겟팅
             CardDisplay targetCard = result.gameObject.GetComponentInParent<CardDisplay>();
-            if (targetCard != null)
+            if (targetCard != null && !targetCard.isMine)
             {
-                // 이 카드가 적 필드(EnemyField)에 있는지 확인
-                DropZone targetZone = targetCard.transform.parent.GetComponent<DropZone>();
-                if (targetZone != null && targetZone.zoneType == ZoneType.EnemyField)
+                // 타겟이 도발이 아닌데 적 필드에 다른 도발이 있다면 차단
+                if (!targetCard.data.HasKeyword(Keyword.Taunt) && HasTauntOnEnemyField())
                 {
-                    // 도발 체크 (타겟이 도발이 아닌데 도발 하수인이 있으면 차단)
-                    if (!targetCard.HasKeyword(Keyword.Taunt) && HasTauntOnEnemyField())
-                    {
-                        Debug.Log("도발 하수인을 먼저 처치해야 합니다!");
-                        return;
-                    }
-
-                    // 은신 체크
-                    if (targetCard.isStealthed)
-                    {
-                        Debug.Log("은신 상태인 하수인은 공격할 수 없습니다!");
-                        return;
-                    }
-
-                    // 전투 실행!
-                    ExecuteCombat(attacker, targetCard);
+                    Debug.Log("도발 하수인을 먼저 공격해야 합니다!");
                     return;
                 }
+
+                ExecuteCombat(cardDisplay, targetCard);
+                return;
             }
         }
     }
 
-    /// <summary>
-    /// 적 필드에 도발 하수인이 있는지 확인
-    /// </summary>
     bool HasTauntOnEnemyField()
     {
-        if (GameManager.instance == null || GameManager.instance.enemyField == null)
-            return false;
-
+        if (GameManager.instance.enemyField == null) return false;
         DropZone enemyZone = GameManager.instance.enemyField.GetComponent<DropZone>();
         return enemyZone != null && enemyZone.HasTaunt();
     }
 
-    /// <summary>
-    /// 하수인이 적 영웅 공격
-    /// </summary>
     void ExecuteHeroAttack(CardDisplay attacker, HeroPortrait targetHero)
     {
-        if (attacker.cardData is MonsterCardData atkData)
-        {
-            Debug.Log($"<color=red>{attacker.cardData.cardName}</color>이(가) <color=blue>{targetHero.heroData.heroName}</color>을(를) 공격!");
+        Debug.Log($"<color=orange>{attacker.data.title}</color> -> <color=red>{targetHero.heroData.title}</color> 공격!");
 
-            // 공격 처리
-            attacker.OnAttack(null);
+        attacker.OnAttack(null);
+        targetHero.TakeDamage(attacker.currentAttack);
 
-            // 영웅에게 데미지
-            targetHero.TakeDamage(attacker.currentAttack);
-
-            attacker.UpdateCardUI();
-        }
+        attacker.UpdateVisual();
     }
 
-    /// <summary>
-    /// 하수인 간 전투
-    /// </summary>
     void ExecuteCombat(CardDisplay attacker, CardDisplay defender)
     {
-        if (attacker.cardData is MonsterCardData atkData && defender.cardData is MonsterCardData defData)
-        {
-            Debug.Log($"<color=red>{attacker.cardData.cardName}</color>이(가) <color=blue>{defender.cardData.cardName}</color>을(를) 공격!");
+        Debug.Log($"<color=orange>{attacker.data.title}</color> vs <color=yellow>{defender.data.title}</color> 전투!");
 
-            // 공격 처리
-            attacker.OnAttack(defender);
+        attacker.OnAttack(defender);
 
-            // 1. 방어자에게 공격자의 공격력만큼 데미지
-            defender.TakeDamage(attacker.currentAttack);
+        // 서로에게 데미지 교환
+        int attackerDmg = attacker.currentAttack;
+        int defenderDmg = defender.currentAttack;
 
-            // 2. 공격자에게 방어자의 공격력만큼 데미지 (반격)
-            attacker.TakeDamage(defender.currentAttack);
-        }
+        defender.TakeDamage(attackerDmg);
+        attacker.TakeDamage(defenderDmg);
     }
 }

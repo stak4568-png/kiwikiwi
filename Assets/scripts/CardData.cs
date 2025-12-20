@@ -1,31 +1,80 @@
+using System.Collections.Generic;
 using UnityEngine;
 
-// --- 1. 공통 Enum 정의 (클래스 밖으로 뺍니다) ---
+// --- [공통 Enum 정의] ---
 public enum ZoneType { Hand, PlayerField, EnemyField }
 public enum CardElement { None, Water, Fire, Wind, Earth, Electric, Dark, Light }
+public enum CardType { None = 0, Hero = 5, Character = 10, Spell = 20, Artifact = 30, Equipment = 50 }
+public enum CardAvailability { Unlisted = 0, Collectible = 10, AlwaysAvailable = 20 }
+public enum Keyword { None, Taunt, Charge, Stealth, Divine, Lifesteal, Poison, Windfury, Reborn, Seduce, Immune }
 
-// --- 2. 카드 종류 정의 (필요시 사용) ---
-public enum CardType
+public enum EffectTiming
 {
-    Monster, Spell, Trap, Field, Location, Equipment
+    None, OnSummon, OnDeath, OnRelease, OnAttack, OnDamaged,
+    OnTurnStart, OnTurnEnd, OnEnemyTurnStart, OnEnemyTurnEnd, Manual
 }
 
-// --- 3. 기본 추상 클래스 ---
-public abstract class CardData : ScriptableObject
+public enum EffectTarget
 {
-    [Header("1. 공통 정보")]
+    None, Self, SingleEnemy, SingleAlly, AllEnemies,
+    AllAllies, EnemyHero, PlayerHero, RandomEnemy, Adjacent
+}
+
+public enum EffectCategory
+{
+    Damage, Heal, Buff, Debuff, Draw, Summon, Destroy, Control, Special
+}
+
+// ======================================================
+// 2. 카드 데이터 클래스
+// ======================================================
+
+[CreateAssetMenu(fileName = "card", menuName = "TcgEngine/CardData", order = 5)]
+public class CardData : ScriptableObject
+{
     public string id;
-    public string cardName;
-    public CardType cardType; // 카드 종류 식별용
-    public CardElement element;
-    public int manaCost;
 
-    [Header("2. 시선 시스템용 데이터")]
-    public Sprite originalArt;
-    public Sprite censoredArt;
+    [Header("Display")]
+    public string title;
+    public Sprite art_full;          // 원본 일러스트
+    public Sprite art_censored;      // 검열된 일러스트
+    public Sprite art_board;
 
+    [Header("Stats")]
+    public CardType type;
+    public int mana;
+    public int attack;
+    public int hp;
+    public int lust_attack;          // 유혹 공격력
+    public int mana_defense;   // 방어를 위해 필요한 마나량
+
+    [Header("Keywords")]
+    public List<Keyword> keywords = new List<Keyword>();
+
+    // 키워드 확인용 헬퍼 함수
+    public bool HasKeyword(Keyword kw) => keywords != null && keywords.Contains(kw);
+
+    [Header("Special Events")]
+    public ClimaxEventData climax_data; // 클라이맥스 데이터
+    public Sprite seduce_event_art;    // 유혹 이벤트 전용 아트
+
+    [Header("Card Text")]
     [TextArea(3, 5)]
-    public string description;          // 해금 후 설명
+    public string text;              // 해금 후 설명
     [TextArea(3, 5)]
-    public string censoredDescription;  // 해금 전 설명
+    public string text_censored;     // 해금 전 설명
+
+    [Header("FX & Audio")]
+    public GameObject death_fx;
+    public AudioClip spawn_audio;
+
+    // ★ 추가된 부분: 효과 시스템 연동 ★
+    [Header("Abilities & Effects")]
+    [Tooltip("이 카드가 가진 특수 효과 리스트 (ScriptableObject)")]
+    public List<CardEffect> effects = new List<CardEffect>();
+
+    // --- 헬퍼 함수 ---
+    public bool IsCharacter() => type == CardType.Character;
+    public bool IsHero() => type == CardType.Hero;
+    public bool IsSpell() => type == CardType.Spell;
 }

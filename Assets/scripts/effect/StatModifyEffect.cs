@@ -1,6 +1,3 @@
-// StatModifyEffect.cs
-// 공격력/체력을 변경하는 버프/디버프 효과
-
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewStatModifyEffect", menuName = "TCG/Effects/Stat Modify")]
@@ -11,11 +8,8 @@ public class StatModifyEffect : CardEffect
     public int healthModifier = 0;      // +면 버프, -면 디버프
     public bool isPermanent = true;     // 영구적 변경 여부
 
-
     public override void Execute(EffectContext context)
     {
-        if (context.isCancelled) return;
-
         switch (targetType)
         {
             case EffectTarget.Self:
@@ -41,24 +35,29 @@ public class StatModifyEffect : CardEffect
 
     void ModifyStats(CardDisplay card)
     {
+        // ★ 수정 포인트: currentAttack, currentHp (변수명 변경 반영) ★
         card.currentAttack += attackModifier;
-        card.currentHealth += healthModifier;
+        card.currentHp += healthModifier;
 
         // 최소값 보정
         if (card.currentAttack < 0) card.currentAttack = 0;
-        if (card.currentHealth <= 0)
-        {
-            card.currentHealth = 0;
-            // 체력 0 이하면 파괴 (Die 호출은 TakeDamage에서 처리)
-        }
+        if (card.currentHp < 0) card.currentHp = 0;
 
-        card.UpdateCardUI();
+        // ★ 수정 포인트: UpdateCardUI -> UpdateVisual (함수명 변경 반영) ★
+        card.UpdateVisual();
 
         string buffStr = "";
         if (attackModifier != 0) buffStr += $"공격력 {(attackModifier > 0 ? "+" : "")}{attackModifier} ";
         if (healthModifier != 0) buffStr += $"체력 {(healthModifier > 0 ? "+" : "")}{healthModifier}";
 
-        Debug.Log($"[효과] {effectName}: {card.cardData.cardName} {buffStr}");
+        // ★ 수정 포인트: cardData.cardName -> data.title ★
+        Debug.Log($"[효과] {effectName}: {card.data.title} {buffStr}");
+
+        // 체력이 0 이하면 파괴 처리 (CardDisplay에 TakeDamage 로직이 있다면 활용 가능)
+        if (card.currentHp <= 0)
+        {
+            Destroy(card.gameObject);
+        }
     }
 
     void ModifyAllInZone(ZoneType zone)
@@ -76,15 +75,5 @@ public class StatModifyEffect : CardEffect
                 break;
             }
         }
-    }
-
-    public override string GetDescription()
-    {
-        string result = "";
-        if (attackModifier != 0)
-            result += $"공격력 {(attackModifier > 0 ? "+" : "")}{attackModifier} ";
-        if (healthModifier != 0)
-            result += $"체력 {(healthModifier > 0 ? "+" : "")}{healthModifier}";
-        return result.Trim();
     }
 }

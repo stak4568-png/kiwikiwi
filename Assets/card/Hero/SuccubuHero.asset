@@ -12,18 +12,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e4e50f7080775ac49a9aa7c10b2ebe5b, type: 3}
   m_Name: SuccubuHero
   m_EditorClassIdentifier: Assembly-CSharp::HeroData
-  heroId: sucuhero
-  heroName: "\uC11C\uD050\uBC84\uC2A4"
-  description: "\uC11C\uD050\uBC84\uC2A4\uC785\uB2C8\uB2F9"
-  portrait: {fileID: 6482213247728414424, guid: ee97c9fe30d0d374a8573e403cc7e398, type: 3}
-  portraitDamaged: {fileID: 6482213247728414424, guid: ee97c9fe30d0d374a8573e403cc7e398, type: 3}
-  portraitSeduced: {fileID: 6482213247728414424, guid: ee97c9fe30d0d374a8573e403cc7e398, type: 3}
-  seduceEventArt: {fileID: 2911245892513236901, guid: dfab697e73726eb4585e525ad9eec76f, type: 3}
+  title: "\uC11C\uD050\uBC84\uC2A4 \uC601\uC6C5"
+  art_full: {fileID: 6482213247728414424, guid: ee97c9fe30d0d374a8573e403cc7e398, type: 3}
+  art_seduced: {fileID: 7342428427524365861, guid: a5af2e2b8f104e1449cbe478c9c4cbb4, type: 3}
+  seduce_event_art: {fileID: 7342428427524365861, guid: a5af2e2b8f104e1449cbe478c9c4cbb4, type: 3}
   maxHealth: 30
   startingArmor: 0
+  startingWeapon: {fileID: 0}
   heroPower: {fileID: 0}
   canSeduceAttack: 1
-  seducePower: 100
+  seducePower: 15
+  mana_defense: 1
   seduceDescription: "\uC73C\uD750\uD750\uD750"
-  climaxEvent: {fileID: 11400000, guid: fe496c65487dde247961c1f35fae315a, type: 2}
-  startingWeapon: {fileID: 0}
+  climax_data: {fileID: 11400000, guid: fe496c65487dde247961c1f35fae315a, type: 2}

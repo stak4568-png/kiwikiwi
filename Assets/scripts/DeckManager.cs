@@ -5,88 +5,77 @@ public class DeckManager : MonoBehaviour
 {
     public static DeckManager instance;
 
-    [Header("카드 설정")]
-    public GameObject cardPrefab;       // 카드 프리팹
-    public Transform handArea;          // 카드가 생성될 손패 구역 (HandArea)
+    [Header("프리팹 설정")]
+    public GameObject cardPrefab;
+    public Transform playerHandArea;   // 플레이어 손패 구역
 
-    [Header("덱 데이터")]
-    public List<CardData> masterDeck;   // 처음에 설정하는 전체 카드 리스트
-    private List<CardData> drawingDeck = new List<CardData>(); // 실제 게임 중 뽑을 카드들
+    [Header("플레이어 덱")]
+    public List<CardData> playerMasterDeck;
+    private List<CardData> playerDrawingDeck = new List<CardData>();
 
-    void Awake()
-    {
-        instance = this;
-    }
+    [Header("적 덱 및 패")]
+    public List<CardData> enemyMasterDeck;
+    private List<CardData> enemyDrawingDeck = new List<CardData>();
+    public List<CardData> enemyHand = new List<CardData>(); // 적의 패 (데이터로만 관리)
+
+    void Awake() => instance = this;
 
     void Start()
     {
-        // 1. 게임 시작 시 마스터 덱의 내용을 드로잉 덱으로 복사
-        SetupDeck();
-
-        // 2. 처음 시작할 때 카드 3장 뽑기
-        DrawInitialCards(3);
+        SetupDecks();
+        DrawInitialCards(true, 3);  // 플레이어 3장
+        DrawInitialCards(false, 3); // 적 3장
     }
 
-    public void SetupDeck()
+    public void SetupDecks()
     {
-        drawingDeck.Clear();
-        drawingDeck.AddRange(masterDeck);
-        ShuffleDeck();
+        // 플레이어 덱 세팅
+        playerDrawingDeck.Clear();
+        playerDrawingDeck.AddRange(playerMasterDeck);
+        Shuffle(playerDrawingDeck);
+
+        // 적 덱 세팅
+        enemyDrawingDeck.Clear();
+        enemyDrawingDeck.AddRange(enemyMasterDeck);
+        Shuffle(enemyDrawingDeck);
     }
 
-    // 덱 섞기 (Fisher-Yates 알고리즘)
-    public void ShuffleDeck()
+    private void Shuffle(List<CardData> deck)
     {
-        for (int i = 0; i < drawingDeck.Count; i++)
+        for (int i = 0; i < deck.Count; i++)
         {
-            CardData temp = drawingDeck[i];
-            int randomIndex = Random.Range(i, drawingDeck.Count);
-            drawingDeck[i] = drawingDeck[randomIndex];
-            drawingDeck[randomIndex] = temp;
+            CardData temp = deck[i];
+            int randomIndex = Random.Range(i, deck.Count);
+            deck[i] = deck[randomIndex];
+            deck[randomIndex] = temp;
         }
-        Debug.Log("덱을 섞었습니다.");
     }
 
-    // 카드 한 장 뽑기
-    public void DrawCard()
+    // 카드 뽑기 통합 함수
+    public void DrawCard(bool isPlayer)
     {
-        if (drawingDeck.Count <= 0)
+        if (isPlayer)
         {
-            Debug.LogWarning("덱에 카드가 더 이상 없습니다!");
-            return;
-        }
+            if (playerDrawingDeck.Count <= 0 || playerHandArea.childCount >= 10) return;
+            CardData data = playerDrawingDeck[playerDrawingDeck.Count - 1];
+            playerDrawingDeck.RemoveAt(playerDrawingDeck.Count - 1);
 
-        // 손패 제한 확인 (예: 최대 10장)
-        if (handArea.childCount >= 10)
+            GameObject newCard = Instantiate(cardPrefab, playerHandArea);
+            newCard.GetComponent<CardDisplay>().Init(data, true);
+        }
+        else
         {
-            Debug.Log("손패가 가득 찼습니다!");
-            return;
+            if (enemyDrawingDeck.Count <= 0 || enemyHand.Count >= 10) return;
+            CardData data = enemyDrawingDeck[enemyDrawingDeck.Count - 1];
+            enemyDrawingDeck.RemoveAt(enemyDrawingDeck.Count - 1);
+
+            enemyHand.Add(data); // 적은 리스트에만 추가
+            Debug.Log($"적이 카드를 1장 뽑았습니다. (현재 적 패: {enemyHand.Count}장)");
         }
-
-        // 덱의 맨 위(마지막 인덱스)에서 카드 데이터를 가져옴
-        CardData data = drawingDeck[drawingDeck.Count - 1];
-        drawingDeck.RemoveAt(drawingDeck.Count - 1);
-
-        // 카드 프리팹 생성
-        GameObject newCard = Instantiate(cardPrefab, handArea);
-
-        // 카드 데이터 주입
-        CardDisplay display = newCard.GetComponent<CardDisplay>();
-        if (display != null)
-        {
-            display.cardData = data;
-            display.UpdateSourceZone(); // 손패 비주얼로 자동 설정됨
-            display.UpdateCardUI();
-        }
-
-        Debug.Log($"{data.cardName}을(를) 드로우했습니다.");
     }
 
-    public void DrawInitialCards(int count)
+    public void DrawInitialCards(bool isPlayer, int count)
     {
-        for (int i = 0; i < count; i++)
-        {
-            DrawCard();
-        }
+        for (int i = 0; i < count; i++) DrawCard(isPlayer);
     }
 }

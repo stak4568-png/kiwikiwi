@@ -8,34 +8,37 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
 
-    [Header("자원 관리 (마나/집중력)")]
-    public int maxMana = 1;
-    public int currentMana = 1;
-    public int maxFocus = 1;
-    public int currentFocus = 1;
+    [Header("플레이어 실시간 자원")]
+    public int playerMaxMana = 1;
+    public int playerCurrentMana = 1;
+    public int playerMaxFocus = 1;
+    public int playerCurrentFocus = 1;
 
-    [Header("마나 잠금 페널티")]
-    [SerializeField] private int manaLockTurnCount = 0; // 마나가 잠긴 남은 턴 수
+    [Header("적 실시간 자원")]
+    public int enemyMaxMana = 1;
+    public int enemyCurrentMana = 1;
 
-    [Header("턴 상태")]
+    // 외부 참조용 별명 (Property)
+    public int currentMana => isEnemyTurn ? enemyCurrentMana : playerCurrentMana;
+    public int maxMana => isEnemyTurn ? enemyMaxMana : playerMaxMana;
+    public int currentFocus => playerCurrentFocus;
+
+    [Header("상태 관리")]
+    [SerializeField] private int manaLockTurnCount = 0;
     public int turnCount = 1;
     public bool isEnemyTurn = false;
 
-    [Header("UI 연결 (텍스트)")]
+    [Header("UI 연결")]
     public TMP_Text manaText;
     public TMP_Text focusText;
     public TMP_Text turnText;
-
-    [Header("UI 연결 (마나 구슬)")]
     public GameObject manaIconPrefab;
     public Transform manaContainer;
     private List<Image> manaIcons = new List<Image>();
 
-    [Header("Zone 참조")]
+    [Header("구역 및 영웅 참조")]
     public Transform playerField;
     public Transform enemyField;
-
-    [Header("Hero 참조")]
     public HeroPortrait playerHero;
     public HeroPortrait enemyHero;
 
@@ -54,15 +57,12 @@ public class GameManager : MonoBehaviour
             {
                 GameObject icon = Instantiate(manaIconPrefab, manaContainer);
                 Transform fullIconTransform = icon.transform.Find("FullIcon");
-                if (fullIconTransform != null)
-                {
-                    manaIcons.Add(fullIconTransform.GetComponent<Image>());
-                }
+                if (fullIconTransform != null) manaIcons.Add(fullIconTransform.GetComponent<Image>());
                 icon.SetActive(false);
             }
         }
 
-        // 2. 필드 및 영웅 참조 자동 연결
+        // 2. 참조 자동 연결
         if (playerField == null) playerField = GameObject.Find("PlayerArea")?.transform;
         if (enemyField == null) enemyField = GameObject.Find("EnemyArea")?.transform;
         if (playerHero == null) playerHero = HeroPortrait.playerHero;
@@ -72,160 +72,128 @@ public class GameManager : MonoBehaviour
     }
 
     // === 자원 관리 함수 ===
-
     public bool TrySpendMana(int amount)
     {
-        // 마나 잠금 상태일 때는 항상 0이므로 소비 불가
-        if (currentMana >= amount && amount > 0)
+        if (isEnemyTurn)
         {
-            currentMana -= amount;
-            UpdateUI();
-            return true;
+            if (enemyCurrentMana >= amount) { enemyCurrentMana -= amount; UpdateUI(); return true; }
         }
-        return amount == 0; // 비용이 0인 카드는 낼 수 있음
+        else
+        {
+            if (playerCurrentMana >= amount) { playerCurrentMana -= amount; UpdateUI(); return true; }
+        }
+        return amount == 0;
     }
 
     public void GainMana(int amount)
     {
-        // 마나 잠금 상태가 아닐 때만 마나 획득 가능
-        if (manaLockTurnCount <= 0)
-        {
-            currentMana = Mathf.Min(currentMana + amount, maxMana);
-            UpdateUI();
-        }
+        if (isEnemyTurn) enemyCurrentMana = Mathf.Min(enemyCurrentMana + amount, enemyMaxMana);
+        else if (manaLockTurnCount <= 0) playerCurrentMana = Mathf.Min(playerCurrentMana + amount, playerMaxMana);
+        UpdateUI();
     }
 
     public bool TryUseFocus()
     {
-        if (currentFocus > 0)
-        {
-            currentFocus--;
-            UpdateUI();
-            return true;
-        }
+        if (playerCurrentFocus > 0) { playerCurrentFocus--; UpdateUI(); return true; }
         return false;
     }
 
-    public void GainFocus(int amount)
-    {
-        currentFocus += amount;
-        UpdateUI();
-    }
+    public void GainFocus(int amount) { playerCurrentFocus += amount; UpdateUI(); }
+    public void SetManaLock(int turns) { manaLockTurnCount = turns; playerCurrentMana = 0; UpdateUI(); }
 
-    /// <summary>
-    /// 마나 잠금 페널티 설정 (수락 시 호출)
-    /// </summary>
-    public void SetManaLock(int turns)
-    {
-        manaLockTurnCount = turns;
-        currentMana = 0; // 즉시 마나를 0으로 만듦
-        Debug.Log($"<color=red>마나 잠금 페널티 발생: {turns}턴 동안 마나 사용 불가</color>");
-        UpdateUI();
-    }
-
-    // === 게임 이벤트 제어 ===
-
+    // === 게임 이벤트 ===
     public void CheckGameOver()
     {
-        if (playerHero.currentHealth <= 0)
-            Debug.Log("<color=red>플레이어 패배...</color>");
-        else if (enemyHero.currentHealth <= 0)
-            Debug.Log("<color=cyan>플레이어 승리!</color>");
+        if (playerHero.currentHealth <= 0) Debug.Log("<color=red>플레이어 패배...</color>");
+        else if (enemyHero.currentHealth <= 0) Debug.Log("<color=cyan>플레이어 승리!</color>");
     }
 
     public void TriggerClimax()
     {
-        if (enemyHero != null && enemyHero.heroData != null && enemyHero.heroData.climaxEvent != null)
+        if (enemyHero != null && enemyHero.heroData.climax_data != null)
         {
-            if (GameUIManager.instance != null)
-            {
-                Debug.Log("GameManager: 클라이맥스 시작");
-                GameUIManager.instance.ShowClimaxEvent(enemyHero.heroData.climaxEvent);
-
-                // 클라이맥스 발생 시 적의 현재 공격 사이클 중단
-                StopAllCoroutines();
-                StartCoroutine(ReturnToPlayerTurnAfterEvent());
-            }
+            GameUIManager.instance.ShowClimaxEvent(enemyHero.heroData.climax_data);
+            StopAllCoroutines();
+            StartCoroutine(ReturnToPlayerTurnAfterEvent());
         }
     }
 
-    // 이벤트 종료 후 플레이어 턴으로 안전하게 복귀하는 코루틴
     IEnumerator ReturnToPlayerTurnAfterEvent()
     {
-        // UI가 완전히 닫힐 때까지 대기
         yield return new WaitUntil(() => GameUIManager.instance.currentState == GameUIState.None);
         yield return new WaitForSeconds(0.5f);
-
-        Debug.Log("이벤트 연출 종료. 플레이어 턴을 시작합니다.");
         StartNewPlayerTurn();
     }
 
     // === 턴 관리 및 적 AI ===
-
     public void EndTurn()
     {
         if (isEnemyTurn) return;
-
-        if (EffectManager.instance != null)
-            EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnTurnEnd, ZoneType.PlayerField);
-
+        if (EffectManager.instance != null) EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnTurnEnd, ZoneType.PlayerField);
         StartCoroutine(EnemyPhase());
     }
 
     IEnumerator EnemyPhase()
     {
         isEnemyTurn = true;
-        Debug.Log("── 적 턴 시작 ──");
+        // 적 턴 시작 시 마나 회복
+        if (enemyMaxMana < 10) enemyMaxMana++;
+        enemyCurrentMana = enemyMaxMana;
 
         if (enemyHero != null) enemyHero.OnTurnStart();
-
-        if (EffectManager.instance != null)
-            EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnEnemyTurnStart, ZoneType.EnemyField);
-
+        UpdateUI();
         yield return new WaitForSeconds(0.5f);
 
-        // 1. 적 영웅 유혹 공격
-        if (enemyHero != null && enemyHero.heroData != null && enemyHero.heroData.canSeduceAttack)
+        // 1. 적 카드 드로우
+        if (DeckManager.instance != null)
+        {
+            DeckManager.instance.DrawCard(false);
+            yield return new WaitForSeconds(0.8f);
+        }
+
+        // 2. 적 카드 소환 AI
+        yield return StartCoroutine(EnemyPlayCardsRoutine());
+
+        // 3. 적 영웅 유혹 공격 (방어 마나 시스템 적용)
+        if (enemyHero != null && enemyHero.heroData.canSeduceAttack)
         {
             bool isHeroAttackDone = false;
             enemyHero.ExecuteSeduceAttack(() => isHeroAttackDone = true);
             yield return new WaitUntil(() => isHeroAttackDone);
-
             if (playerHero.currentLust >= 100) yield break;
             yield return new WaitForSeconds(0.5f);
         }
 
-        // 2. 적 하수인들 공격
+        // 4. 적 하수인 공격
         if (enemyField != null)
         {
             CardDisplay[] enemies = enemyField.GetComponentsInChildren<CardDisplay>();
             foreach (CardDisplay enemy in enemies)
             {
                 if (playerHero.currentLust >= 100) yield break;
-
-                if (enemy.cardData is MonsterCardData monster)
+                if (enemy.data != null && enemy.data.IsCharacter())
                 {
-                    bool isSeduceAttack = (playerField.childCount == 0);
-
-                    if (isSeduceAttack)
+                    // 아군 필드에 하수인이 없으면 유혹 공격 이벤트 발생
+                    if (playerField.childCount == 0)
                     {
-                        bool monsterAttackDone = false;
-                        if (GameUIManager.instance != null)
-                        {
-                            string mName = monster.cardName;
-                            Sprite mArt = monster.seduceEventArt ?? (enemy.isArtRevealed ? (monster.originalArt ?? monster.censoredArt) : monster.censoredArt);
-                            int mLust = monster.lustAttack;
+                        bool done = false;
 
-                            GameUIManager.instance.ShowSeduceEvent(mName, mArt, mLust, () => monsterAttackDone = true);
-                            yield return new WaitUntil(() => monsterAttackDone);
+                        // ★ 세분화된 유혹 공격 정보 추출 ★
+                        string mName = enemy.data.title;
+                        Sprite mArt = enemy.data.seduce_event_art ?? (enemy.isArtRevealed ? enemy.data.art_full : enemy.data.art_censored);
+                        int mLust = enemy.data.lust_attack;
+                        int mManaDef = enemy.data.mana_defense; // 추가된 방어 마나
 
-                            if (playerHero.currentLust >= 100) yield break;
-                        }
+                        // GameUIManager에 5개의 인자 전달
+                        GameUIManager.instance.ShowSeduceEvent(mName, mArt, mLust, mManaDef, () => done = true);
+
+                        yield return new WaitUntil(() => done);
+                        if (playerHero.currentLust >= 100) yield break;
                     }
                     else
                     {
                         yield return new WaitForSeconds(0.6f);
-                        ExecuteEnemyAttack(enemy, monster);
+                        ExecuteEnemyAttack(enemy, enemy.data);
                         if (playerHero.currentLust >= 100) yield break;
                     }
                 }
@@ -233,15 +201,37 @@ public class GameManager : MonoBehaviour
         }
 
         if (enemyHero != null) enemyHero.OnTurnEnd();
-
-        if (EffectManager.instance != null)
-            EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnEnemyTurnEnd, ZoneType.EnemyField);
-
         yield return new WaitForSeconds(0.5f);
         StartNewPlayerTurn();
     }
 
-    void ExecuteEnemyAttack(CardDisplay enemy, MonsterCardData monster)
+    IEnumerator EnemyPlayCardsRoutine()
+    {
+        int currentMinions = enemyField.childCount;
+        while (currentMinions < 5)
+        {
+            List<CardData> playable = new List<CardData>();
+            foreach (CardData card in DeckManager.instance.enemyHand)
+                if (card.mana <= enemyCurrentMana) playable.Add(card);
+
+            if (playable.Count > 0)
+            {
+                playable.Sort((a, b) => b.mana.CompareTo(a.mana));
+                CardData best = playable[0];
+                enemyCurrentMana -= best.mana;
+                DeckManager.instance.enemyHand.Remove(best);
+
+                GameObject newCard = Instantiate(DeckManager.instance.cardPrefab, enemyField);
+                newCard.GetComponent<CardDisplay>().Init(best, false);
+                currentMinions++;
+                UpdateUI();
+                yield return new WaitForSeconds(1.0f);
+            }
+            else break;
+        }
+    }
+
+    void ExecuteEnemyAttack(CardDisplay enemy, CardData monster)
     {
         CardDisplay target = FindTauntTarget();
         if (target == null && playerField.childCount > 0)
@@ -252,7 +242,6 @@ public class GameManager : MonoBehaviour
 
         if (target != null)
         {
-            enemy.OnAttack(target);
             target.TakeDamage(enemy.currentAttack);
             enemy.TakeDamage(target.currentAttack);
         }
@@ -264,7 +253,7 @@ public class GameManager : MonoBehaviour
         foreach (Transform child in playerField)
         {
             CardDisplay cd = child.GetComponent<CardDisplay>();
-            if (cd != null && cd.HasKeyword(Keyword.Taunt)) return cd;
+            if (cd != null && cd.data.HasKeyword(Keyword.Taunt)) return cd;
         }
         return null;
     }
@@ -273,74 +262,36 @@ public class GameManager : MonoBehaviour
     {
         isEnemyTurn = false;
         turnCount++;
+        if (playerMaxMana < 10) playerMaxMana++;
 
-        // 최대 마나 증가
-        if (maxMana < 10) maxMana++;
+        if (manaLockTurnCount > 0) { playerCurrentMana = 0; manaLockTurnCount--; }
+        else playerCurrentMana = playerMaxMana;
 
-        // ★ 마나 잠금 체크 및 마나 회복 로직 ★
-        if (manaLockTurnCount > 0)
-        {
-            currentMana = 0;
-            manaLockTurnCount--;
-            Debug.Log($"마나 잠금 지속 중... 남은 턴: {manaLockTurnCount}");
-        }
-        else
-        {
-            currentMana = maxMana;
-        }
+        playerCurrentFocus = playerMaxFocus;
+        if (DeckManager.instance != null) DeckManager.instance.DrawCard(true);
+        foreach (CardDisplay card in playerField.GetComponentsInChildren<CardDisplay>()) card.OnTurnStart();
 
-        currentFocus = maxFocus;
-
-        if (DeckManager.instance != null) DeckManager.instance.DrawCard();
-        if (playerHero != null) playerHero.OnTurnStart();
-
-        foreach (CardDisplay card in playerField.GetComponentsInChildren<CardDisplay>())
-            card.OnTurnStart();
-
-        if (EffectManager.instance != null)
-            EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnTurnStart, ZoneType.PlayerField);
-
+        if (EffectManager.instance != null) EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnTurnStart, ZoneType.PlayerField);
         UpdateUI();
     }
 
     public void UpdateUI()
     {
-        // 마나 텍스트 표시 (잠금 상태일 때 시각적 피드백 추가 가능)
         if (manaText != null)
-        {
-            manaText.text = (manaLockTurnCount > 0) ? $"0 / {maxMana} (잠김)" : $"{currentMana} / {maxMana}";
-            manaText.color = (manaLockTurnCount > 0) ? Color.red : Color.white;
-        }
-
-        if (focusText != null) focusText.text = $"Focus: {currentFocus}";
+            manaText.text = (manaLockTurnCount > 0) ? "Locked" : $"{playerCurrentMana}/{playerMaxMana}";
+        if (focusText != null) focusText.text = $"Focus: {playerCurrentFocus}";
         if (turnText != null) turnText.text = $"Turn {turnCount}";
 
-        // 마나 구슬 업데이트
         for (int i = 0; i < manaIcons.Count; i++)
         {
-            if (i < maxMana)
+            if (i < playerMaxMana)
             {
                 manaIcons[i].transform.parent.gameObject.SetActive(true);
-                // 잠금 상태면 구슬을 다 끔, 아니면 현재 마나만큼 켬
-                manaIcons[i].enabled = (manaLockTurnCount <= 0 && i < currentMana);
-                // 잠금 상태일 때 구슬 색상을 어둡게 변경
-                manaIcons[i].color = (manaLockTurnCount > 0) ? new Color(0.3f, 0.3f, 0.3f) : Color.white;
+                manaIcons[i].enabled = (manaLockTurnCount <= 0 && i < playerCurrentMana);
             }
-            else
-            {
-                manaIcons[i].transform.parent.gameObject.SetActive(false);
-            }
+            else manaIcons[i].transform.parent.gameObject.SetActive(false);
         }
-
         if (playerHero != null) playerHero.UpdateUI();
         if (enemyHero != null) enemyHero.UpdateUI();
-    }
-
-    public List<CardDisplay> GetCardsInZone(ZoneType zone)
-    {
-        List<CardDisplay> cards = new List<CardDisplay>();
-        Transform targetZone = (zone == ZoneType.PlayerField) ? playerField : enemyField;
-        if (targetZone != null) cards.AddRange(targetZone.GetComponentsInChildren<CardDisplay>());
-        return cards;
     }
 }

@@ -685,23 +685,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f8fdffee8ab7546458afbf9d44a92046, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CardDisplay
-  cardData: {fileID: 11400000, guid: c80d20ed9379dac45adcf02aa9fbab80, type: 2}
-  iconData: {fileID: 11400000, guid: 1cd7e5324edc6544b942768a6b7a8575, type: 2}
+  data: {fileID: 0}
+  isMine: 0
+  currentAttack: 0
+  currentHp: 0
+  currentLust: 0
+  canAttack: 0
   isArtRevealed: 0
   isInfoRevealed: 0
   handVisual: {fileID: 6265500758893513336}
-  fieldVisual: {fileID: 3497359226158782012}
-  cardImage: {fileID: 3884285976981899750}
-  elementImage: {fileID: 5850576995847001081}
-  nameText: {fileID: 7428400696406798037}
-  manaText: {fileID: 5922091172329803644}
-  descriptionText: {fileID: 4475795245418676236}
-  attackText: {fileID: 2709375593890048376}
-  healthText: {fileID: 1139385604195587065}
-  fieldArt: {fileID: 6932609290694113139}
-  fieldElement: {fileID: 5850576995847001081}
-  fieldATK: {fileID: 8234714172378292540}
-  fieldHP: {fileID: 5523014905531103905}
+  boardVisual: {fileID: 3497359226158782012}
+  handArt: {fileID: 3884285976981899750}
+  handTitle: {fileID: 7428400696406798037}
+  handMana: {fileID: 5922091172329803644}
+  handAttack: {fileID: 2709375593890048376}
+  handHp: {fileID: 1139385604195587065}
+  handLust: {fileID: 0}
+  handLustIcon: {fileID: 0}
+  boardArt: {fileID: 6932609290694113139}
+  boardAttack: {fileID: 8234714172378292540}
+  boardHp: {fileID: 5523014905531103905}
+  boardTauntOverlay: {fileID: 0}
+  boardStealthOverlay: {fileID: 0}
 --- !u!225 &6726539351103628496
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -865,81 +870,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!1 &2867301524373575133
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 6756794497198262616}
-  - component: {fileID: 8538393378098930927}
-  - component: {fileID: 5850576995847001081}
-  m_Layer: 5
-  m_Name: elements
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &6756794497198262616
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2867301524373575133}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 2330030768295270067}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 137.32}
-  m_SizeDelta: {x: 30.46, y: 26.2024}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!222 &8538393378098930927
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2867301524373575133}
-  m_CullTransparentMesh: 1
---- !u!114 &5850576995847001081
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2867301524373575133}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 0}
-  m_Color: {r: 0.9622642, g: 0.19517623, b: 0.19517623, a: 1}
-  m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
 --- !u!1 &3497359226158782012
 GameObject:
   m_ObjectHideFlags: 0
@@ -1296,7 +1226,6 @@ RectTransform:
   m_Children:
   - {fileID: 3812312863896683126}
   - {fileID: 2019528544261929438}
-  - {fileID: 6756794497198262616}
   - {fileID: 6491711723002254064}
   - {fileID: 8015866555467271723}
   - {fileID: 9020208421407763131}

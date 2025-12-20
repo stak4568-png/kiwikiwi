@@ -5,12 +5,10 @@ public class DamageEffect : CardEffect
 {
     [Header("데미지 설정")]
     public int damageAmount = 1;
-    public bool canTargetHero = false;  // 영웅도 타겟 가능?
+    public bool canTargetHero = false;
 
     public override void Execute(EffectContext context)
     {
-        if (context.isCancelled) return;
-
         // 대상에 따라 데미지 적용
         switch (targetType)
         {
@@ -19,7 +17,8 @@ public class DamageEffect : CardEffect
                 if (context.targetCard != null)
                 {
                     context.targetCard.TakeDamage(damageAmount);
-                    Debug.Log($"[효과] {effectName}: {context.targetCard.cardData.cardName}에게 {damageAmount} 데미지!");
+                    // ★ 수정 포인트: cardData.cardName -> data.title ★
+                    Debug.Log($"[효과] {effectName}: {context.targetCard.data.title}에게 {damageAmount} 데미지!");
                 }
                 break;
 
@@ -32,7 +31,6 @@ public class DamageEffect : CardEffect
                 break;
 
             case EffectTarget.EnemyHero:
-                // 수정됨: GameManager 대신 HeroPortrait.enemyHero 직접 참조
                 if (canTargetHero && HeroPortrait.enemyHero != null)
                 {
                     HeroPortrait.enemyHero.TakeDamage(damageAmount);
@@ -48,6 +46,7 @@ public class DamageEffect : CardEffect
 
     void DamageAllInZone(ZoneType zone)
     {
+        // 씬에서 DropZone을 찾음
         DropZone[] zones = GameObject.FindObjectsByType<DropZone>(FindObjectsSortMode.None);
         foreach (var dz in zones)
         {
@@ -58,7 +57,6 @@ public class DamageEffect : CardEffect
                 {
                     card.TakeDamage(damageAmount);
                 }
-                Debug.Log($"[효과] {effectName}: {zone}의 모든 카드에 {damageAmount} 데미지!");
                 break;
             }
         }
@@ -75,24 +73,12 @@ public class DamageEffect : CardEffect
                 if (cards.Length > 0)
                 {
                     int randomIndex = Random.Range(0, cards.Length);
+                    // ★ 수정 포인트: cardData.cardName -> data.title ★
+                    Debug.Log($"[효과] {effectName}: {cards[randomIndex].data.title}에게 {damageAmount} 데미지!");
                     cards[randomIndex].TakeDamage(damageAmount);
-                    Debug.Log($"[효과] {effectName}: {cards[randomIndex].cardData.cardName}에게 {damageAmount} 데미지!");
                 }
                 break;
             }
         }
-    }
-
-    public override string GetDescription()
-    {
-        string targetStr = targetType switch
-        {
-            EffectTarget.SingleEnemy => "적 하나에게",
-            EffectTarget.AllEnemies => "모든 적에게",
-            EffectTarget.RandomEnemy => "무작위 적에게",
-            EffectTarget.EnemyHero => "적 영웅에게",
-            _ => "대상에게"
-        };
-        return $"{targetStr} {damageAmount}의 피해를 줍니다.";
     }
 }
