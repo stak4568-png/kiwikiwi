@@ -79,6 +79,10 @@ public class GameUIManager : MonoBehaviour
     private Sprite _originalCardArt;
     private int _forcedDialogueIndex = 0;
 
+    // 성능 최적화: 이전 프레임 타이머 값 캐싱 (불필요한 텍스트 업데이트 방지)
+    private float _lastDisplayedTime = -1f;
+    private const float TEXT_UPDATE_INTERVAL = 0.1f;  // 0.1초마다 텍스트 업데이트
+
     void Awake()
     {
         if (instance == null) instance = this;
@@ -390,6 +394,7 @@ public class GameUIManager : MonoBehaviour
     {
         _gazeTimer = 0f;
         _isGazingUncensored = false;
+        _lastDisplayedTime = -1f;  // 타이머 캐시 초기화
         if (gazeWarningOverlay != null) gazeWarningOverlay.gameObject.SetActive(false);
         if (gazeTimerText != null) gazeTimerText.gameObject.SetActive(false);
     }
@@ -404,14 +409,15 @@ public class GameUIManager : MonoBehaviour
             gazeWarningOverlay.color = new Color(1f, 0f, 0.5f, warningProgress * 0.5f);
         }
 
-        if (gazeTimerText != null)
+        // 성능 최적화: 0.1초마다만 텍스트 업데이트 (매 프레임 문자열 생성 방지)
+        float remaining = gazeSeductionTime - _gazeTimer;
+        float displayTime = Mathf.Floor(remaining * 10f) / 10f;  // 0.1초 단위로 반올림
+
+        if (gazeTimerText != null && remaining > 0 && displayTime != _lastDisplayedTime)
         {
-            float remaining = gazeSeductionTime - _gazeTimer;
-            if (remaining > 0)
-            {
-                gazeTimerText.text = $"♥ {remaining:F1}s";
-                gazeTimerText.color = Color.Lerp(Color.white, Color.red, progress);
-            }
+            _lastDisplayedTime = displayTime;
+            gazeTimerText.text = $"♥ {displayTime:F1}s";
+            gazeTimerText.color = Color.Lerp(Color.white, Color.red, progress);
         }
     }
 
