@@ -17,7 +17,7 @@ MonoBehaviour:
   warningArt: {fileID: -1670654266622654971, guid: edb0e3868c57cd64abb5a7aa3ae06990, type: 3}
   temptationArt: {fileID: -2062314995586192214, guid: d14a5d41dc133384697cda78f7922a85, type: 3}
   acceptArt: {fileID: 6482213247728414424, guid: ee97c9fe30d0d374a8573e403cc7e398, type: 3}
-  forcedArt: {fileID: 6074641314603879984, guid: e95b187402288e046b22313150a5683d, type: 3}
+  forcedArt: {fileID: 6482213247728414424, guid: ee97c9fe30d0d374a8573e403cc7e398, type: 3}
   temptationDialogue: "\uB0A0 \uC6D0\uD558\uB294 \uAC70 \uC544\uB2C8\uC57C...?"
   rejectDialogues:
   - "\uC544\uC9C1 \uBC84\uD2F8 \uC218 \uC788\uB2E4\uACE0 \uC0DD\uAC01\uD574...?"

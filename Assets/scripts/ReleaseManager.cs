@@ -54,7 +54,7 @@ public class ReleaseManager : MonoBehaviour
 
     public void EnterReleaseMode()
     {
-        if (GameManager.instance != null && GameManager.instance.isEnemyTurn) return;
+        if (GameManager.instance != null && !GameManager.instance.CanPlayerAct()) return;
 
         if (GameManager.instance != null &&
             GameManager.instance.currentMana >= GameManager.instance.maxMana)

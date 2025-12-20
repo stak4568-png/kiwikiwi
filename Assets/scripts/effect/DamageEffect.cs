@@ -14,7 +14,14 @@ public class DamageEffect : CardEffect
         {
             case EffectTarget.SingleEnemy:
             case EffectTarget.SingleAlly:
-                if (context.targetCard != null)
+                // 영웅 타겟팅 우선 처리
+                if (context.targetHero != null && canTargetHero)
+                {
+                    context.targetHero.TakeDamage(damageAmount);
+                    Debug.Log($"[효과] {effectName}: {context.targetHero.heroData.title}에게 {damageAmount} 데미지!");
+                }
+                // 카드 타겟팅
+                else if (context.targetCard != null)
                 {
                     context.targetCard.TakeDamage(damageAmount);
                     // ★ 수정 포인트: cardData.cardName -> data.title ★

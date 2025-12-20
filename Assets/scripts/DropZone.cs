@@ -29,8 +29,14 @@ public class DropZone : MonoBehaviour, IDropHandler
 
     public void OnDrop(PointerEventData eventData)
     {
+        Debug.Log($"[DropZone] OnDrop 호출됨 - Zone: {zoneType}");
+        
         Draggable d = eventData.pointerDrag?.GetComponent<Draggable>();
-        if (d == null) return;
+        if (d == null)
+        {
+            Debug.Log("[DropZone] Draggable이 null입니다.");
+            return;
+        }
 
         // [규칙 1] 적 필드로는 직접 드롭 불가
         if (zoneType == ZoneType.EnemyField) return;
@@ -67,6 +73,12 @@ public class DropZone : MonoBehaviour, IDropHandler
 
             // ★ 수정 포인트: cardName -> title ★
             Debug.Log($"{card.data.title} 소환!");
+
+            // 필드 비주얼 업데이트
+            if (FieldVisualManager.instance != null)
+            {
+                FieldVisualManager.instance.OnCardSummoned(transform.position, true);
+            }
 
             // 소환 시 효과 발동 (EffectManager 연동)
             if (EffectManager.instance != null)

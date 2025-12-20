@@ -23,6 +23,9 @@ MonoBehaviour:
   hp: 1
   lust_attack: 1
   mana_defense: 1
+  gender: 2
+  seduceFetishType: 0
+  bonusLustOnFetish: 10
   keywords: 
   climax_data: {fileID: 11400000, guid: fe496c65487dde247961c1f35fae315a, type: 2}
   seduce_event_art: {fileID: 7342428427524365861, guid: a5af2e2b8f104e1449cbe478c9c4cbb4, type: 3}

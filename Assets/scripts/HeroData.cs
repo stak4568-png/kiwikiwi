@@ -24,6 +24,13 @@ public class HeroData : ScriptableObject
     [TextArea(2, 3)]
     public string seduceDescription;
 
+    [Header("4-1. 유혹 속성 (페티시 시스템)")]
+    [Tooltip("유혹 공격의 페티시 속성")]
+    public FetishType seduceFetishType = FetishType.None;
+    
+    [Tooltip("페티시 약점 시 추가 EP 상승량")]
+    public int bonusLustOnFetish = 10;
+
     [Header("5. 특수 이벤트")]
     [Tooltip("흥분도 100% 달성 시 실행될 클라이맥스 데이터")]
     public ClimaxEventData climax_data; // GameManager에서 이 이름을 참조합니다.

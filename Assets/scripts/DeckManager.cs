@@ -5,36 +5,38 @@ public class DeckManager : MonoBehaviour
 {
     public static DeckManager instance;
 
-    [Header("ÇÁ¸®ÆÕ ¼³Á¤")]
+    [Header("ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½")]
     public GameObject cardPrefab;
-    public Transform playerHandArea;   // ÇÃ·¹ÀÌ¾î ¼ÕÆĞ ±¸¿ª
+    [Tooltip("í•„ë“œì— ì†Œí™˜ë˜ëŠ” ì¹´ë“œ í”„ë¦¬íŒ¹ (ìŠ¬ë¡¯ í¬ê¸°ì— ë§ì¶¤). ì—†ìœ¼ë©´ cardPrefab ì‚¬ìš©")]
+    public GameObject cardFieldPrefab; // í•„ë“œìš©
+    public Transform playerHandArea;   // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
-    [Header("ÇÃ·¹ÀÌ¾î µ¦")]
+    [Header("ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½")]
     public List<CardData> playerMasterDeck;
     private List<CardData> playerDrawingDeck = new List<CardData>();
 
-    [Header("Àû µ¦ ¹× ÆĞ")]
+    [Header("ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½")]
     public List<CardData> enemyMasterDeck;
     private List<CardData> enemyDrawingDeck = new List<CardData>();
-    public List<CardData> enemyHand = new List<CardData>(); // ÀûÀÇ ÆĞ (µ¥ÀÌÅÍ·Î¸¸ °ü¸®)
+    public List<CardData> enemyHand = new List<CardData>(); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ (ï¿½ï¿½ï¿½ï¿½ï¿½Í·Î¸ï¿½ ï¿½ï¿½ï¿½ï¿½)
 
     void Awake() => instance = this;
 
     void Start()
     {
         SetupDecks();
-        DrawInitialCards(true, 3);  // ÇÃ·¹ÀÌ¾î 3Àå
-        DrawInitialCards(false, 3); // Àû 3Àå
+        DrawInitialCards(true, 3);  // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ 3ï¿½ï¿½
+        DrawInitialCards(false, 3); // ï¿½ï¿½ 3ï¿½ï¿½
     }
 
     public void SetupDecks()
     {
-        // ÇÃ·¹ÀÌ¾î µ¦ ¼¼ÆÃ
+        // ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         playerDrawingDeck.Clear();
         playerDrawingDeck.AddRange(playerMasterDeck);
         Shuffle(playerDrawingDeck);
 
-        // Àû µ¦ ¼¼ÆÃ
+        // ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
         enemyDrawingDeck.Clear();
         enemyDrawingDeck.AddRange(enemyMasterDeck);
         Shuffle(enemyDrawingDeck);
@@ -51,7 +53,7 @@ public class DeckManager : MonoBehaviour
         }
     }
 
-    // Ä«µå »Ì±â ÅëÇÕ ÇÔ¼ö
+    // Ä«ï¿½ï¿½ ï¿½Ì±ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½
     public void DrawCard(bool isPlayer)
     {
         if (isPlayer)
@@ -69,8 +71,8 @@ public class DeckManager : MonoBehaviour
             CardData data = enemyDrawingDeck[enemyDrawingDeck.Count - 1];
             enemyDrawingDeck.RemoveAt(enemyDrawingDeck.Count - 1);
 
-            enemyHand.Add(data); // ÀûÀº ¸®½ºÆ®¿¡¸¸ Ãß°¡
-            Debug.Log($"ÀûÀÌ Ä«µå¸¦ 1Àå »Ì¾Ò½À´Ï´Ù. (ÇöÀç Àû ÆĞ: {enemyHand.Count}Àå)");
+            enemyHand.Add(data); // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ®ï¿½ï¿½ï¿½ï¿½ ï¿½ß°ï¿½
+            Debug.Log($"ï¿½ï¿½ï¿½ï¿½ Ä«ï¿½å¸¦ 1ï¿½ï¿½ ï¿½Ì¾Ò½ï¿½ï¿½Ï´ï¿½. (ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½: {enemyHand.Count}ï¿½ï¿½)");
         }
     }
 

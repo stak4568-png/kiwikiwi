@@ -154,7 +154,8 @@ public class HeroPortrait : MonoBehaviour, IPointerClickHandler, IDropHandler
         {
             currentLust = 100;
             // 유혹 패널 종료 시점과의 충돌 방지를 위해 약간의 지연 후 트리거
-            GameManager.instance.Invoke("TriggerClimax", 0.1f);
+            if (GameManager.instance != null)
+                GameManager.instance.StartCoroutine(DelayedTriggerClimax());
         }
     }
 
@@ -206,9 +207,21 @@ public class HeroPortrait : MonoBehaviour, IPointerClickHandler, IDropHandler
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        // 효과 타겟 선택 모드
         if (EffectManager.instance != null && EffectManager.instance.IsWaitingForTarget())
         {
             EffectManager.instance.OnHeroTargetSelected(this);
+            return;
+        }
+
+        // ★ 자위 대상 선택 모드 처리
+        if (MasturbationManager.instance != null && MasturbationManager.instance.isSelectingTarget)
+        {
+            if (!isPlayerHero) // 적 영웅만 선택 가능
+            {
+                MasturbationManager.instance.OnEnemyHeroSelected(this);
+                return;
+            }
         }
     }
 
@@ -285,5 +298,13 @@ public class HeroPortrait : MonoBehaviour, IPointerClickHandler, IDropHandler
     {
         // 타겟 선택이 필요한지 체크 후 실행
         ExecuteHeroPower(null);
+    }
+
+    // 지연된 클라이맥스 트리거
+    System.Collections.IEnumerator DelayedTriggerClimax()
+    {
+        yield return new WaitForSeconds(0.1f);
+        if (GameManager.instance != null)
+            GameManager.instance.TriggerClimax();
     }
 }
