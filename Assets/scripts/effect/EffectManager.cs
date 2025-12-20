@@ -85,14 +85,13 @@ public class EffectManager : MonoBehaviour
         pendingEffect = effect;
         pendingContext = context;
         Debug.Log($"[타겟 선택] {effect.effectName}의 대상을 선택하세요. (Target Type: {effect.targetType})");
-        
+
         // 타겟 선택 모드 시작 - 가능한 타겟 하이라이트
         HighlightValidTargets(effect.targetType);
-        
-        // 디버그: 하이라이트된 카드 수 확인
-        CardDisplay[] allCards = FindObjectsByType<CardDisplay>(FindObjectsSortMode.None);
+
+        // 디버그: 하이라이트된 카드 수 확인 (최적화: FieldSlotManager 사용)
         int highlightedCount = 0;
-        foreach (var card in allCards)
+        foreach (var card in GetFieldCards())
         {
             if (IsValidTarget(card, effect.targetType))
                 highlightedCount++;
@@ -105,22 +104,20 @@ public class EffectManager : MonoBehaviour
     /// </summary>
     void HighlightValidTargets(EffectTarget targetType)
     {
-        // 모든 카드의 하이라이트 초기화
-        CardDisplay[] allCards = FindObjectsByType<CardDisplay>(FindObjectsSortMode.None);
-        foreach (var card in allCards)
+        // 최적화: FieldSlotManager에서 필드 카드만 가져옴 (FindObjectsByType 제거)
+        var fieldCards = GetFieldCards();
+
+        // 모든 필드 카드의 하이라이트 초기화
+        foreach (var card in fieldCards)
         {
             SetCardHighlight(card, false);
         }
-        
-        // 가능한 타겟만 하이라이트 (필드에 있는 카드만)
-        foreach (var card in allCards)
+
+        // 가능한 타겟만 하이라이트
+        foreach (var card in fieldCards)
         {
-            // 필드에 있는 카드만 타겟으로 선택 가능
-            bool isOnField = IsCardOnField(card);
-            if (!isOnField) continue;
-            
             bool isValid = false;
-            
+
             if (targetType == EffectTarget.SingleEnemy)
             {
                 isValid = !card.isMine; // 적 카드만
@@ -129,7 +126,7 @@ public class EffectManager : MonoBehaviour
             {
                 isValid = card.isMine; // 아군 카드만
             }
-            
+
             if (isValid)
             {
                 SetCardHighlight(card, true);
@@ -297,20 +294,19 @@ public class EffectManager : MonoBehaviour
 
     public void CancelTargetSelection()
     {
-        // 하이라이트 제거
-        CardDisplay[] allCards = FindObjectsByType<CardDisplay>(FindObjectsSortMode.None);
-        foreach (var card in allCards)
+        // 하이라이트 제거 (최적화: FieldSlotManager 사용)
+        foreach (var card in GetFieldCards())
         {
             SetCardHighlight(card, false);
         }
-        
+
         // 원래 스케일 딕셔너리 초기화
         _originalScales.Clear();
-        
+
         isWaitingForTarget = false;
         pendingEffect = null;
         pendingContext = null;
-        
+
         Debug.Log("[타겟 선택] 취소됨");
     }
 
@@ -319,17 +315,37 @@ public class EffectManager : MonoBehaviour
     // 전역 타이밍 트리거 (턴 시작/종료 등)
     public void TriggerGlobalTiming(EffectTiming timing, ZoneType zone)
     {
-        DropZone[] zones = FindObjectsByType<DropZone>(FindObjectsSortMode.None);
-        foreach (var dz in zones)
+        // 최적화: FieldSlotManager에서 직접 필드 카드 가져오기
+        if (FieldSlotManager.instance == null) return;
+
+        bool isPlayerZone = (zone == ZoneType.PlayerField);
+        CardDisplay[] cards = FieldSlotManager.instance.GetAllCardsOnField(isPlayerZone);
+
+        foreach (var card in cards)
         {
-            if (dz.zoneType == zone)
+            if (card != null)
             {
-                CardDisplay[] cards = dz.GetComponentsInChildren<CardDisplay>();
-                foreach (var card in cards)
-                {
-                    TriggerEffects(card, timing);
-                }
+                TriggerEffects(card, timing);
             }
         }
+    }
+
+    /// <summary>
+    /// FieldSlotManager에서 모든 필드 카드를 가져오는 헬퍼 메서드 (성능 최적화)
+    /// </summary>
+    private List<CardDisplay> GetFieldCards()
+    {
+        List<CardDisplay> result = new List<CardDisplay>();
+        if (FieldSlotManager.instance == null) return result;
+
+        // 플레이어 필드 카드
+        CardDisplay[] playerCards = FieldSlotManager.instance.GetAllCardsOnField(true);
+        if (playerCards != null) result.AddRange(playerCards);
+
+        // 적 필드 카드
+        CardDisplay[] enemyCards = FieldSlotManager.instance.GetAllCardsOnField(false);
+        if (enemyCards != null) result.AddRange(enemyCards);
+
+        return result;
     }
 }

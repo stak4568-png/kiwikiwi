@@ -40,9 +40,11 @@ public class FieldSlotManager : MonoBehaviour
     // 슬롯 하이라이트 컴포넌트 캐시
     private Dictionary<Transform, SlotHighlight> _slotHighlights = new Dictionary<Transform, SlotHighlight>();
     private Dictionary<Transform, bool> _slotIsPlayerSlot = new Dictionary<Transform, bool>(); // 슬롯이 플레이어 슬롯인지 캐싱
-    
+    private Dictionary<Transform, int> _slotToIndex = new Dictionary<Transform, int>(); // 슬롯 인덱스 캐싱 (성능 최적화)
+
     // 드래그 중인 카드 추적
     private CardDisplay _draggingCard = null;
+    private bool _wasHighlightActive = false;  // 하이라이트 상태 변경 감지용
 
     void Awake()
     {
@@ -101,25 +103,47 @@ public class FieldSlotManager : MonoBehaviour
 
     void Update()
     {
-        // 드래그 중인 카드 확인 및 하이라이트 업데이트
-        // 최적화: 드래그 중일 때만 업데이트
-        if (enableSlotHighlight && Draggable.currentDragging != null)
+        if (!enableSlotHighlight) return;
+
+        bool isHighlightActive = (Draggable.currentDragging != null);
+
+        // 최적화: 드래그 상태가 변경되었을 때만 처리
+        if (isHighlightActive != _wasHighlightActive)
         {
-            UpdateSlotHighlights();
-        }
-        else if (enableSlotHighlight)
-        {
-            // 드래그가 끝났을 때 하이라이트 제거 (한 번만)
-            if (_draggingCard != null)
+            _wasHighlightActive = isHighlightActive;
+
+            if (isHighlightActive)
             {
-                _draggingCard = null;
-                // 모든 하이라이트 제거
-                foreach (var kvp in _slotHighlights)
-                {
-                    if (kvp.Value != null)
-                        kvp.Value.SetAlpha(0f);
-                }
+                // 드래그 시작 시 한 번만 하이라이트 업데이트
+                UpdateSlotHighlights();
             }
+            else
+            {
+                // 드래그 종료 시 한 번만 하이라이트 제거
+                _draggingCard = null;
+                ClearAllHighlights();
+            }
+        }
+        // 드래그 중인 카드가 변경되었을 때도 업데이트 (다른 카드로 변경 시)
+        else if (isHighlightActive)
+        {
+            CardDisplay currentCard = GetDraggingCard();
+            if (currentCard != _draggingCard)
+            {
+                UpdateSlotHighlights();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 모든 슬롯 하이라이트 제거
+    /// </summary>
+    void ClearAllHighlights()
+    {
+        foreach (var kvp in _slotHighlights)
+        {
+            if (kvp.Value != null)
+                kvp.Value.SetAlpha(0f);
         }
     }
 
@@ -130,10 +154,12 @@ public class FieldSlotManager : MonoBehaviour
     {
         _slotHighlights.Clear();
         _slotIsPlayerSlot.Clear();
+        _slotToIndex.Clear();
 
         // 플레이어 슬롯 하이라이트 초기화
-        foreach (var slot in playerSlots)
+        for (int i = 0; i < playerSlots.Length; i++)
         {
+            Transform slot = playerSlots[i];
             if (slot != null)
             {
                 SlotHighlight highlight = slot.GetComponent<SlotHighlight>();
@@ -144,12 +170,14 @@ public class FieldSlotManager : MonoBehaviour
                 highlight.highlightColor = highlightColor;
                 _slotHighlights[slot] = highlight;
                 _slotIsPlayerSlot[slot] = true; // 플레이어 슬롯으로 캐싱
+                _slotToIndex[slot] = i; // 슬롯 인덱스 캐싱 (성능 최적화)
             }
         }
 
         // 적 슬롯 하이라이트 초기화
-        foreach (var slot in enemySlots)
+        for (int i = 0; i < enemySlots.Length; i++)
         {
+            Transform slot = enemySlots[i];
             if (slot != null)
             {
                 SlotHighlight highlight = slot.GetComponent<SlotHighlight>();
@@ -160,6 +188,7 @@ public class FieldSlotManager : MonoBehaviour
                 highlight.highlightColor = highlightColor;
                 _slotHighlights[slot] = highlight;
                 _slotIsPlayerSlot[slot] = false; // 적 슬롯으로 캐싱
+                _slotToIndex[slot] = i; // 슬롯 인덱스 캐싱
             }
         }
     }
@@ -235,25 +264,17 @@ public class FieldSlotManager : MonoBehaviour
             return 0f;
         }
 
-        // 슬롯이 이미 점유되어 있으면 하이라이트 없음
-        int slotIndex = -1;
-        for (int i = 0; i < playerSlots.Length; i++)
+        // 최적화: 캐싱된 슬롯 인덱스 사용 (for 루프 제거)
+        if (_slotToIndex.TryGetValue(slot, out int slotIndex))
         {
-            if (playerSlots[i] == slot)
+            if (slotIndex >= 0 && slotIndex < _playerSlotCards.Length && _playerSlotCards[slotIndex] != null)
             {
-                slotIndex = i;
-                break;
+                return 0f; // 슬롯이 이미 점유됨
             }
         }
 
-        if (slotIndex >= 0 && _playerSlotCards[slotIndex] != null)
-        {
-            return 0f; // 슬롯이 이미 점유됨
-        }
-
         // 마나 체크
-        if (!GameManager.instance.CanPlayerAct() || 
-            GameManager.instance.playerCurrentMana < _draggingCard.data.mana)
+        if (GameManager.instance.playerCurrentMana < _draggingCard.data.mana)
         {
             return 0f; // 마나 부족
         }

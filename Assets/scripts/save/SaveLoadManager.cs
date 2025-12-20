@@ -1,6 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using UnityEngine;
 
 /// <summary>
@@ -20,6 +22,7 @@ public class SaveLoadManager : MonoBehaviour
     public float autoSaveInterval = 300f;    // 5분
 
     private float _lastAutoSave;
+    private bool _isSaving = false;  // 저장 중 플래그 (중복 저장 방지)
     private string SavePath => Application.persistentDataPath;
 
     // 이벤트
@@ -39,12 +42,60 @@ public class SaveLoadManager : MonoBehaviour
 
     void Update()
     {
-        // 자동 저장
-        if (autoSaveEnabled && Time.time - _lastAutoSave > autoSaveInterval)
+        // 자동 저장 (비동기로 실행하여 프레임 블로킹 방지)
+        if (autoSaveEnabled && !_isSaving && Time.time - _lastAutoSave > autoSaveInterval)
         {
             _lastAutoSave = Time.time;
-            SaveToSlot(0); // 슬롯 0을 자동 저장용으로
+            StartCoroutine(AutoSaveAsync()); // 비동기 자동 저장
         }
+    }
+
+    /// <summary>
+    /// 비동기 자동 저장 (메인 스레드 블로킹 방지)
+    /// </summary>
+    IEnumerator AutoSaveAsync()
+    {
+        if (_isSaving) yield break;
+        _isSaving = true;
+
+        // 데이터 수집은 메인 스레드에서 (Unity API 접근 필요)
+        SaveData data = CollectSaveData();
+        string path = GetSavePath(0);
+
+        // JSON 직렬화를 별도 프레임에서 처리
+        yield return null;
+
+        string json = null;
+        bool success = false;
+
+        // 백그라운드 스레드에서 JSON 직렬화 및 파일 쓰기
+        Task saveTask = Task.Run(() =>
+        {
+            try
+            {
+                json = JsonUtility.ToJson(data, true);
+                File.WriteAllText(path, json);
+                success = true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"자동 저장 실패: {e.Message}");
+            }
+        });
+
+        // 저장 완료 대기 (프레임 블로킹 없이)
+        while (!saveTask.IsCompleted)
+        {
+            yield return null;
+        }
+
+        if (success)
+        {
+            Debug.Log("<color=green>자동 저장 완료</color>");
+            OnSaveCompleted?.Invoke();
+        }
+
+        _isSaving = false;
     }
 
     /// <summary>

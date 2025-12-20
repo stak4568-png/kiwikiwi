@@ -37,10 +37,17 @@ public class FieldVisualManager : MonoBehaviour
     public Color emptySlotGlow = new Color(0.5f, 0.7f, 1f, 0.3f);
     public Color occupiedSlotGlow = new Color(0.8f, 0.5f, 1f, 0.5f);
 
+    [Header("성능 최적화")]
+    [Tooltip("동시에 존재할 수 있는 최대 파문 개수")]
+    public int maxActiveRipples = 5;
+    [Tooltip("균열 펄스 업데이트 간격 (초)")]
+    public float crackPulseUpdateInterval = 0.05f;
+
     // [제거됨] CardSlotIndicator - FieldSlotManager로 대체됨
 
     private Coroutine _rippleCoroutine;
     private Coroutine _crackPulseCoroutine;
+    private int _activeRippleCount = 0;  // 현재 활성 파문 개수 추적
 
     void Awake()
     {
@@ -109,12 +116,13 @@ public class FieldVisualManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 균열 오버레이 펄스 효과
+    /// 균열 오버레이 펄스 효과 (최적화: 매 프레임 대신 간격 업데이트)
     /// </summary>
     IEnumerator CrackPulseLoop()
     {
         Color baseColor = crackOverlay.color;
         float baseAlpha = baseColor.a;
+        WaitForSeconds wait = new WaitForSeconds(crackPulseUpdateInterval);
 
         while (true)
         {
@@ -122,7 +130,7 @@ public class FieldVisualManager : MonoBehaviour
             Color newColor = baseColor;
             newColor.a = baseAlpha + pulse;
             crackOverlay.color = newColor;
-            yield return null;
+            yield return wait;  // 최적화: 매 프레임 대신 간격마다 업데이트
         }
     }
 
@@ -181,6 +189,12 @@ public class FieldVisualManager : MonoBehaviour
     {
         if (ambientRipplePrefab == null) return;
 
+        // 성능 최적화: Ambient 타입은 개수 제한 적용
+        if (type == RippleType.Ambient && _activeRippleCount >= maxActiveRipples)
+        {
+            return;  // 최대 개수 초과 시 생성하지 않음
+        }
+
         GameObject ripple = Instantiate(ambientRipplePrefab, position, Quaternion.identity, transform);
 
         // 타입별 크기/색상 조절
@@ -193,7 +207,27 @@ public class FieldVisualManager : MonoBehaviour
         };
 
         ripple.transform.localScale = Vector3.one * scale;
-        Destroy(ripple, 2f);
+
+        // 파문 개수 추적 및 자동 제거
+        if (type == RippleType.Ambient)
+        {
+            _activeRippleCount++;
+            StartCoroutine(DestroyRippleAfterDelay(ripple, 2f));
+        }
+        else
+        {
+            Destroy(ripple, 2f);
+        }
+    }
+
+    /// <summary>
+    /// 파문 제거 및 카운터 감소 (성능 최적화)
+    /// </summary>
+    IEnumerator DestroyRippleAfterDelay(GameObject ripple, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        _activeRippleCount--;
+        if (ripple != null) Destroy(ripple);
     }
 
     void SpawnShatterEffect(Vector3 position)
