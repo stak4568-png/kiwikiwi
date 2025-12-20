@@ -78,6 +78,8 @@ public class GameUIManager : MonoBehaviour
     private TemptationData _currentTemptation;
     private int _rejectCount = 0;
     private Sprite _originalCardArt;
+    private int _forcedDialogueIndex = 0;
+    private bool _isInForcedSequence = false;
 
     void Awake()
     {
@@ -100,6 +102,8 @@ public class GameUIManager : MonoBehaviour
         StopGazeTimer();
         _currentTemptation = null;
         _rejectCount = 0;
+        _forcedDialogueIndex = 0;
+        _isInForcedSequence = false;
 
         currentState = GameUIState.None;
         currentZoomedCard = null;
@@ -548,8 +552,43 @@ public class GameUIManager : MonoBehaviour
             HeroPortrait.playerHero.TakeLustDamage(_currentTemptation.acceptLustGain, true);
         }
 
-        // 잠시 후 닫기
-        StartCoroutine(CloseTemptationAfterDelay(1.5f));
+        // 거절 버튼 숨기고 확인 버튼으로 변경
+        if (temptRejectButton != null) temptRejectButton.gameObject.SetActive(false);
+        if (temptAcceptText != null) temptAcceptText.text = _currentTemptation.confirmButtonText;
+        if (temptAcceptButton != null)
+        {
+            temptAcceptButton.onClick.RemoveAllListeners();
+            temptAcceptButton.onClick.AddListener(OnConfirmAndClose);
+        }
+    }
+
+    void OnConfirmAndClose()
+    {
+        // 버튼 복원
+        if (temptRejectButton != null) temptRejectButton.gameObject.SetActive(true);
+
+        // 100% 도달 체크
+        if (HeroPortrait.playerHero != null && HeroPortrait.playerHero.currentLust >= 100)
+        {
+            CloseAllUI();
+            return;
+        }
+
+        // 카드 줌으로 돌아감 (응시 초기화)
+        _rejectCount = 0;
+        currentState = GameUIState.CardZoom;
+
+        if (temptationButtonGroup != null) temptationButtonGroup.SetActive(false);
+
+        // 원래 카드 확대 화면으로
+        if (currentZoomedCard != null)
+        {
+            ShowCardZoom(currentZoomedCard);
+        }
+        else
+        {
+            CloseAllUI();
+        }
     }
 
     void OnTemptationReject()
@@ -592,7 +631,10 @@ public class GameUIManager : MonoBehaviour
     {
         if (_currentTemptation == null) return;
 
-        Debug.Log($"<color=red>★ 강제 유혹! {_currentTemptation.forcedLustGain} Lust 증가!</color>");
+        _isInForcedSequence = true;
+        _forcedDialogueIndex = 0;
+
+        Debug.Log($"<color=red>★ 강제 유혹 시작!</color>");
 
         // 강제 유혹 일러스트
         if (mainIllustration != null && _currentTemptation.forcedArt != null)
@@ -606,19 +648,92 @@ public class GameUIManager : MonoBehaviour
             descriptionText.text = _currentTemptation.forcedDialogue;
         }
 
-        // 버튼 비활성화
-        if (temptRejectButton != null) temptRejectButton.interactable = false;
+        // 거절 버튼 숨기기 (수락만 가능)
+        if (temptRejectButton != null) temptRejectButton.gameObject.SetActive(false);
 
-        // 강제 Lust 증가
-        if (HeroPortrait.playerHero != null)
+        // 수락 버튼 텍스트 변경
+        if (temptAcceptText != null) temptAcceptText.text = _currentTemptation.forcedButtonText;
+
+        // 수락 버튼 클릭 시 강제 유혹 처리
+        if (temptAcceptButton != null)
         {
-            HeroPortrait.playerHero.TakeLustDamage(_currentTemptation.forcedLustGain, true);
+            temptAcceptButton.onClick.RemoveAllListeners();
+            temptAcceptButton.onClick.AddListener(OnForcedTemptationAccept);
         }
 
         UpdateRejectCountUI();
+    }
 
-        // 잠시 후 닫기
-        StartCoroutine(CloseTemptationAfterDelay(2.0f));
+    void OnForcedTemptationAccept()
+    {
+        if (_currentTemptation == null) return;
+
+        // 첫 클릭: Lust 증가
+        if (_forcedDialogueIndex == 0)
+        {
+            Debug.Log($"<color=red>★ 강제 유혹! {_currentTemptation.forcedLustGain} Lust 증가!</color>");
+            if (HeroPortrait.playerHero != null)
+            {
+                HeroPortrait.playerHero.TakeLustDamage(_currentTemptation.forcedLustGain, true);
+            }
+        }
+
+        // 순차 대사/일러스트 표시
+        if (_currentTemptation.forcedAfterDialogues != null &&
+            _forcedDialogueIndex < _currentTemptation.forcedAfterDialogues.Length)
+        {
+            // 대사 표시
+            if (descriptionText != null)
+            {
+                descriptionText.text = _currentTemptation.forcedAfterDialogues[_forcedDialogueIndex];
+            }
+
+            // 일러스트 변경 (있으면)
+            if (_currentTemptation.forcedAfterArts != null &&
+                _forcedDialogueIndex < _currentTemptation.forcedAfterArts.Length &&
+                _currentTemptation.forcedAfterArts[_forcedDialogueIndex] != null)
+            {
+                if (mainIllustration != null)
+                {
+                    mainIllustration.sprite = _currentTemptation.forcedAfterArts[_forcedDialogueIndex];
+                }
+            }
+
+            // 버튼 텍스트 변경
+            if (temptAcceptText != null) temptAcceptText.text = _currentTemptation.confirmButtonText;
+
+            _forcedDialogueIndex++;
+        }
+        else
+        {
+            // 모든 대사 끝 → 종료
+            _isInForcedSequence = false;
+
+            // 버튼 복원
+            if (temptRejectButton != null) temptRejectButton.gameObject.SetActive(true);
+
+            // 100% 도달 체크
+            if (HeroPortrait.playerHero != null && HeroPortrait.playerHero.currentLust >= 100)
+            {
+                CloseAllUI();
+                return;
+            }
+
+            // 카드 줌으로 돌아감
+            _rejectCount = 0;
+            currentState = GameUIState.CardZoom;
+
+            if (temptationButtonGroup != null) temptationButtonGroup.SetActive(false);
+
+            if (currentZoomedCard != null)
+            {
+                ShowCardZoom(currentZoomedCard);
+            }
+            else
+            {
+                CloseAllUI();
+            }
+        }
     }
 
     IEnumerator ReturnToGazeAfterDelay(float delay)
