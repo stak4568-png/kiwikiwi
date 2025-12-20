@@ -1,10 +1,31 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using System.Collections.Generic;
 
 public class DropZone : MonoBehaviour, IDropHandler
 {
     public ZoneType zoneType;
     public int maxCards = 5;
+
+    // 최적화: 도발 카드 캐싱
+    private readonly HashSet<CardDisplay> _tauntCards = new HashSet<CardDisplay>();
+
+    /// <summary>
+    /// 도발 카드 등록 (카드 배치 시 호출)
+    /// </summary>
+    public void RegisterTaunt(CardDisplay card)
+    {
+        if (card != null && card.data != null && card.data.HasKeyword(Keyword.Taunt))
+            _tauntCards.Add(card);
+    }
+
+    /// <summary>
+    /// 도발 카드 해제 (카드 제거 시 호출)
+    /// </summary>
+    public void UnregisterTaunt(CardDisplay card)
+    {
+        _tauntCards.Remove(card);
+    }
 
     public void OnDrop(PointerEventData eventData)
     {
@@ -68,17 +89,12 @@ public class DropZone : MonoBehaviour, IDropHandler
     }
 
     /// <summary>
-    /// 필드에 도발 카드가 있는지 확인
+    /// 필드에 도발 카드가 있는지 확인 (최적화: O(1) 조회)
     /// </summary>
     public bool HasTaunt()
     {
-        CardDisplay[] cards = GetComponentsInChildren<CardDisplay>();
-        foreach (var card in cards)
-        {
-            // ★ 수정 포인트: HasKeyword 시스템 사용 ★
-            if (card.data.HasKeyword(Keyword.Taunt))
-                return true;
-        }
-        return false;
+        // 최적화: 캐시된 HashSet 사용 (죽은 카드 정리)
+        _tauntCards.RemoveWhere(card => card == null);
+        return _tauntCards.Count > 0;
     }
 }

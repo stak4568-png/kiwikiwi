@@ -42,6 +42,12 @@ public class GameManager : MonoBehaviour
     public HeroPortrait playerHero;
     public HeroPortrait enemyHero;
 
+    // 최적화: UI 업데이트 지연 처리
+    private bool _uiDirty = false;
+
+    // 최적화: 리스트 재사용 (GC 감소)
+    private readonly List<CardData> _playableCards = new List<CardData>();
+
     void Awake()
     {
         if (instance == null) instance = this;
@@ -68,7 +74,17 @@ public class GameManager : MonoBehaviour
         if (playerHero == null) playerHero = HeroPortrait.playerHero;
         if (enemyHero == null) enemyHero = HeroPortrait.enemyHero;
 
-        UpdateUI();
+        MarkUIDirty();
+    }
+
+    void LateUpdate()
+    {
+        // 최적화: 프레임당 한 번만 UI 업데이트
+        if (_uiDirty)
+        {
+            _uiDirty = false;
+            UpdateUIImmediate();
+        }
     }
 
     // === 자원 관리 함수 ===
@@ -76,11 +92,11 @@ public class GameManager : MonoBehaviour
     {
         if (isEnemyTurn)
         {
-            if (enemyCurrentMana >= amount) { enemyCurrentMana -= amount; UpdateUI(); return true; }
+            if (enemyCurrentMana >= amount) { enemyCurrentMana -= amount; MarkUIDirty(); return true; }
         }
         else
         {
-            if (playerCurrentMana >= amount) { playerCurrentMana -= amount; UpdateUI(); return true; }
+            if (playerCurrentMana >= amount) { playerCurrentMana -= amount; MarkUIDirty(); return true; }
         }
         return amount == 0;
     }
@@ -89,17 +105,17 @@ public class GameManager : MonoBehaviour
     {
         if (isEnemyTurn) enemyCurrentMana = Mathf.Min(enemyCurrentMana + amount, enemyMaxMana);
         else if (manaLockTurnCount <= 0) playerCurrentMana = Mathf.Min(playerCurrentMana + amount, playerMaxMana);
-        UpdateUI();
+        MarkUIDirty();
     }
 
     public bool TryUseFocus()
     {
-        if (playerCurrentFocus > 0) { playerCurrentFocus--; UpdateUI(); return true; }
+        if (playerCurrentFocus > 0) { playerCurrentFocus--; MarkUIDirty(); return true; }
         return false;
     }
 
-    public void GainFocus(int amount) { playerCurrentFocus += amount; UpdateUI(); }
-    public void SetManaLock(int turns) { manaLockTurnCount = turns; playerCurrentMana = 0; UpdateUI(); }
+    public void GainFocus(int amount) { playerCurrentFocus += amount; MarkUIDirty(); }
+    public void SetManaLock(int turns) { manaLockTurnCount = turns; playerCurrentMana = 0; MarkUIDirty(); }
 
     // === 게임 이벤트 ===
     public void CheckGameOver()
@@ -141,7 +157,7 @@ public class GameManager : MonoBehaviour
         enemyCurrentMana = enemyMaxMana;
 
         if (enemyHero != null) enemyHero.OnTurnStart();
-        UpdateUI();
+        MarkUIDirty();
         yield return new WaitForSeconds(0.5f);
 
         // 1. 적 카드 드로우
@@ -210,21 +226,22 @@ public class GameManager : MonoBehaviour
         int currentMinions = enemyField.childCount;
         while (currentMinions < 5)
         {
-            List<CardData> playable = new List<CardData>();
+            // 최적화: 리스트 재사용
+            _playableCards.Clear();
             foreach (CardData card in DeckManager.instance.enemyHand)
-                if (card.mana <= enemyCurrentMana) playable.Add(card);
+                if (card.mana <= enemyCurrentMana) _playableCards.Add(card);
 
-            if (playable.Count > 0)
+            if (_playableCards.Count > 0)
             {
-                playable.Sort((a, b) => b.mana.CompareTo(a.mana));
-                CardData best = playable[0];
+                _playableCards.Sort((a, b) => b.mana.CompareTo(a.mana));
+                CardData best = _playableCards[0];
                 enemyCurrentMana -= best.mana;
                 DeckManager.instance.enemyHand.Remove(best);
 
                 GameObject newCard = Instantiate(DeckManager.instance.cardPrefab, enemyField);
                 newCard.GetComponent<CardDisplay>().Init(best, false);
                 currentMinions++;
-                UpdateUI();
+                MarkUIDirty();
                 yield return new WaitForSeconds(1.0f);
             }
             else break;
@@ -272,10 +289,16 @@ public class GameManager : MonoBehaviour
         foreach (CardDisplay card in playerField.GetComponentsInChildren<CardDisplay>()) card.OnTurnStart();
 
         if (EffectManager.instance != null) EffectManager.instance.TriggerGlobalTiming(EffectTiming.OnTurnStart, ZoneType.PlayerField);
-        UpdateUI();
+        MarkUIDirty();
     }
 
-    public void UpdateUI()
+    // 최적화: UI 업데이트 요청 (LateUpdate에서 일괄 처리)
+    public void MarkUIDirty() => _uiDirty = true;
+
+    // 즉시 UI 업데이트 (외부에서 필요시 호출)
+    public void UpdateUI() => UpdateUIImmediate();
+
+    private void UpdateUIImmediate()
     {
         if (manaText != null)
             manaText.text = (manaLockTurnCount > 0) ? "Locked" : $"{playerCurrentMana}/{playerMaxMana}";
