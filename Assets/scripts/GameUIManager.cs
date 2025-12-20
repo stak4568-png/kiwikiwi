@@ -4,7 +4,7 @@ using TMPro;
 using System;
 using System.Collections;
 
-// GameUI »óÅÂ Á¤ÀÇ
+// GameUI ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 public enum GameUIState { None, CardZoom, SeduceEvent, ClimaxEvent, ClimaxResolution }
 
 public class GameUIManager : MonoBehaviour
@@ -15,11 +15,11 @@ public class GameUIManager : MonoBehaviour
     public GameUIState currentState = GameUIState.None;
 
     [Header("1. Common UI References")]
-    public GameObject uiRoot;            // ÀüÃ¼ UI ·çÆ® ÆĞ³Î
-    public Image overlayBackground;      // ¾ÏÀü¿ë ¹è°æ ÀÌ¹ÌÁö
-    public Image mainIllustration;       // Áß¾Ó Å« ÀÏ·¯½ºÆ®
-    public TMP_Text titleText;           // ÀÌ¸§/Á¦¸ñ
-    public TMP_Text descriptionText;     // ¼³¸í ¹× ´ë»çÃ¢
+    public GameObject uiRoot;            // ï¿½ï¿½Ã¼ UI ï¿½ï¿½Æ® ï¿½Ğ³ï¿½
+    public Image overlayBackground;      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½Ì¹ï¿½ï¿½ï¿½
+    public Image mainIllustration;       // ï¿½ß¾ï¿½ Å« ï¿½Ï·ï¿½ï¿½ï¿½Æ®
+    public TMP_Text titleText;           // ï¿½Ì¸ï¿½/ï¿½ï¿½ï¿½ï¿½
+    public TMP_Text descriptionText;     // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½Ã¢
 
     [Header("2. Seduce Event Group")]
     public GameObject seduceButtonGroup;
@@ -28,9 +28,9 @@ public class GameUIManager : MonoBehaviour
     public TMP_Text blockButtonText;
 
     [Header("3. Climax & Choice Group")]
-    public GameObject climaxButtonGroup; // Next ¹öÆ° Æ÷ÇÔ ±×·ì
+    public GameObject climaxButtonGroup; // Next ï¿½ï¿½Æ° ï¿½ï¿½ï¿½ï¿½ ï¿½×·ï¿½
     public Button nextButton;
-    public GameObject choiceGroup;       // ¼ö¶ô/°ÅÀı ¹öÆ° ºÎ¸ğ ±×·ì
+    public GameObject choiceGroup;       // ï¿½ï¿½ï¿½ï¿½/ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Æ° ï¿½Î¸ï¿½ ï¿½×·ï¿½
     public Button acceptButton;
     public Button rejectButton;
     public TMP_Text acceptText;
@@ -41,9 +41,19 @@ public class GameUIManager : MonoBehaviour
     public TMP_Text statsText;
     public GameObject gazeButtonGroup;
 
+    [Header("5. Gaze Seduction System")]
+    [Tooltip("ê²€ì—´ í•´ì œ ì¼ëŸ¬ìŠ¤íŠ¸ ì‘ì‹œ ì‹œ ìœ í˜¹ ë°œë™ê¹Œì§€ ê±¸ë¦¬ëŠ” ì‹œê°„(ì´ˆ)")]
+    public float gazeSeductionTime = 3.0f;
+    [Tooltip("ì‘ì‹œ ì‹œ ì´ˆë‹¹ ì¦ê°€í•˜ëŠ” Lust")]
+    public int gazeLustPerSecond = 5;
+    [Tooltip("ê²½ê³  ì‹œì‘ ì‹œê°„ (gazeSeductionTimeì˜ ë¹„ìœ¨)")]
+    public float warningThreshold = 0.5f;
+    public Image gazeWarningOverlay;
+    public TMP_Text gazeTimerText;
+
     [Header("Background Settings")]
-    public float zoomDimAlpha = 0.4f;    // ÁÜÀÏ ¶§ ¹è°æ Åõ¸íµµ
-    public float eventDimAlpha = 0.9f;   // ÀÌº¥Æ®ÀÏ ¶§ ¹è°æ Åõ¸íµµ
+    public float zoomDimAlpha = 0.4f;    // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    public float eventDimAlpha = 0.9f;   // ï¿½Ìºï¿½Æ®ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     private Action onEventComplete;
     private int dialogueIndex = 0;
@@ -52,6 +62,11 @@ public class GameUIManager : MonoBehaviour
 
     private string[] resolutionDialogues;
     private int resolutionIndex = 0;
+
+    // ì‘ì‹œ ì‹œìŠ¤í…œ ìƒíƒœ
+    private float _gazeTimer = 0f;
+    private bool _isGazingUncensored = false;
+    private Coroutine _gazeCoroutine;
 
     void Awake()
     {
@@ -69,11 +84,30 @@ public class GameUIManager : MonoBehaviour
         if (zoomStatsGroup != null) zoomStatsGroup.SetActive(false);
         if (gazeButtonGroup != null) gazeButtonGroup.SetActive(false);
 
+        // ì‘ì‹œ ì‹œìŠ¤í…œ ë¦¬ì…‹
+        StopGazeTimer();
+
         currentState = GameUIState.None;
         currentZoomedCard = null;
     }
 
-    // ¹è°æ Å¬¸¯ (ÁÜ ¸ğµå¿¡¼­¸¸ ÀÛµ¿)
+    void Update()
+    {
+        // ì‘ì‹œ ìœ í˜¹ ì‹œìŠ¤í…œ ì—…ë°ì´íŠ¸
+        if (_isGazingUncensored && currentState == GameUIState.CardZoom)
+        {
+            _gazeTimer += Time.deltaTime;
+            UpdateGazeWarningUI();
+
+            // ìœ í˜¹ ë°œë™ ì²´í¬
+            if (_gazeTimer >= gazeSeductionTime)
+            {
+                TriggerGazeSeduction();
+            }
+        }
+    }
+
+    // ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ (ï¿½ï¿½ ï¿½ï¿½å¿¡ï¿½ï¿½ï¿½ï¿½ ï¿½Ûµï¿½)
     public void OnBackgroundClick()
     {
         if (currentState == GameUIState.CardZoom)
@@ -92,8 +126,8 @@ public class GameUIManager : MonoBehaviour
         }
     }
 
-    // --- [±â´É 1] À¯È¤ ÀÌº¥Æ® (¿µ¿õ/ÇÏ¼öÀÎ °øÅë »ç¿ë) ---
-    // ¡Ú ¿¡·¯ ÇØ°á: ÀÎÀÚ¸¦ 4°³ ¹Ş´Â ¿À¹ö·Îµå ¹öÀü ¡Ú
+    // --- [ï¿½ï¿½ï¿½ 1] ï¿½ï¿½È¤ ï¿½Ìºï¿½Æ® (ï¿½ï¿½ï¿½ï¿½/ï¿½Ï¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½) ---
+    // ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ø°ï¿½: ï¿½ï¿½ï¿½Ú¸ï¿½ 4ï¿½ï¿½ ï¿½Ş´ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Îµï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
     public void ShowSeduceEvent(string name, Sprite art, int lustAtk, int manaDef, Action callback)
     {
         CloseAllUI();
@@ -106,33 +140,33 @@ public class GameUIManager : MonoBehaviour
 
         titleText.text = name;
         mainIllustration.sprite = art;
-        descriptionText.text = $"{name}ÀÇ À¯È¤! \n(ÇÇÇØ: {lustAtk} Lust / ¹æ¾î ºñ¿ë: {manaDef} Mana)";
+        descriptionText.text = $"{name}ï¿½ï¿½ ï¿½ï¿½È¤! \n(ï¿½ï¿½ï¿½ï¿½: {lustAtk} Lust / ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½: {manaDef} Mana)";
 
-        // [¹æ¾î ¹öÆ° ¼³Á¤]
+        // [ï¿½ï¿½ï¿½ ï¿½ï¿½Æ° ï¿½ï¿½ï¿½ï¿½]
         int currentMana = GameManager.instance.playerCurrentMana;
         bool canAfford = currentMana >= manaDef;
 
-        blockButtonText.text = $"¸¶³ª·Î ¹æ¾î\n({manaDef} ¼Ò¸ğ / º¸À¯: {currentMana})";
-        blockButton.interactable = canAfford; // ¸¶³ª°¡ ºÎÁ·ÇÏ¸é ¹öÆ° ºñÈ°¼ºÈ­
+        blockButtonText.text = $"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½\n({manaDef} ï¿½Ò¸ï¿½ / ï¿½ï¿½ï¿½ï¿½: {currentMana})";
+        blockButton.interactable = canAfford; // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ ï¿½ï¿½Æ° ï¿½ï¿½È°ï¿½ï¿½È­
 
         blockButton.onClick.RemoveAllListeners();
         blockButton.onClick.AddListener(() => {
-            // Á¤ÇØÁø ¹æ¾î ¸¶³ª¸¸ ¼Ò¸ğÇÏ°í µ¥¹ÌÁö´Â 0
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ò¸ï¿½ï¿½Ï°ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 0
             GameManager.instance.TrySpendMana(manaDef);
             HeroPortrait.playerHero.TakeLustDamage(0, true);
             FinishEvent();
         });
 
-        // [ÀÎ³»(±×³É ¸Â±â) ¹öÆ° ¼³Á¤]
+        // [ï¿½Î³ï¿½(ï¿½×³ï¿½ ï¿½Â±ï¿½) ï¿½ï¿½Æ° ï¿½ï¿½ï¿½ï¿½]
         endureButton.onClick.RemoveAllListeners();
         endureButton.onClick.AddListener(() => {
-            // ¸¶³ª´Â ¾Æ³¢°í À¯È¤ µ¥¹ÌÁö¸¦ ±×´ë·Î ¹ŞÀ½
+            // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Æ³ï¿½ï¿½ï¿½ ï¿½ï¿½È¤ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½×´ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
             HeroPortrait.playerHero.TakeLustDamage(lustAtk, true);
             FinishEvent();
         });
     }
 
-    // --- [±â´É 2] Å¬¶óÀÌ¸Æ½º ÀÌº¥Æ® ---
+    // --- [ï¿½ï¿½ï¿½ 2] Å¬ï¿½ï¿½ï¿½Ì¸Æ½ï¿½ ï¿½Ìºï¿½Æ® ---
     public void ShowClimaxEvent(ClimaxEventData data)
     {
         CloseAllUI();
@@ -236,10 +270,10 @@ public class GameUIManager : MonoBehaviour
         }
     }
 
-    // --- [±â´É 3] Ä«µå È®´ë º¸±â (½Ã¼± ½Ã½ºÅÛ) ---
+    // --- [ï¿½ï¿½ï¿½ 3] Ä«ï¿½ï¿½ È®ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½Ã¼ï¿½ ï¿½Ã½ï¿½ï¿½ï¿½) ---
     public void ShowCardZoom(CardDisplay card)
     {
-        // ÀÌ¹Ì ´Ù¸¥ ÀÌº¥Æ® ÁßÀÌ¸é ÁÜ ºÒ°¡ (´Ü, ÁÜ »óÅÂ¿¡¼­ ¸®ÇÁ·¹½Ã´Â Çã¿ë)
+        // ï¿½Ì¹ï¿½ ï¿½Ù¸ï¿½ ï¿½Ìºï¿½Æ® ï¿½ï¿½ï¿½Ì¸ï¿½ ï¿½ï¿½ ï¿½Ò°ï¿½ (ï¿½ï¿½, ï¿½ï¿½ ï¿½ï¿½ï¿½Â¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ ï¿½ï¿½ï¿½)
         if (currentState != GameUIState.None && currentState != GameUIState.CardZoom) return;
 
         bool isRefreshing = (currentState == GameUIState.CardZoom);
@@ -257,13 +291,23 @@ public class GameUIManager : MonoBehaviour
         if (mainIllustration != null)
             mainIllustration.sprite = card.isArtRevealed ? card.data.art_full : (card.data.art_censored ?? card.data.art_full);
         if (descriptionText != null)
-            descriptionText.text = card.isInfoRevealed ? card.data.text : (card.data.text_censored ?? "ÇØ±İµÇÁö ¾ÊÀº Á¤º¸ÀÔ´Ï´Ù.");
+            descriptionText.text = card.isInfoRevealed ? card.data.text : (card.data.text_censored ?? "í•´ê¸ˆë˜ì§€ ì•Šì€ ì •ë³´ì…ë‹ˆë‹¤.");
 
         if (statsText != null)
             statsText.text = $"{card.currentAttack} / {card.currentHp}";
 
         if (gazeButtonGroup != null)
-            gazeButtonGroup.SetActive(!card.isMine); // Àû Ä«µåÀÏ ¶§¸¸ ½Ã¼± ¹öÆ° È°¼ºÈ­
+            gazeButtonGroup.SetActive(!card.isMine); // ì  ì¹´ë“œì¼ ë•Œë§Œ ì‘ì‹œ ë²„íŠ¼ í™œì„±í™”
+
+        // â˜… ì‘ì‹œ ìœ í˜¹ ì‹œìŠ¤í…œ: ì  ì¹´ë“œì˜ ê²€ì—´ í•´ì œ ì¼ëŸ¬ìŠ¤íŠ¸ë¥¼ ë³¼ ë•Œ íƒ€ì´ë¨¸ ì‹œì‘
+        if (!card.isMine && card.isArtRevealed && card.data.lust_attack > 0)
+        {
+            StartGazeTimer();
+        }
+        else
+        {
+            StopGazeTimer();
+        }
     }
 
     public void OnClickAppreciate()
@@ -272,6 +316,12 @@ public class GameUIManager : MonoBehaviour
         {
             currentZoomedCard.isArtRevealed = true;
             SyncZoomUI();
+
+            // â˜… ê²€ì—´ í•´ì œ ì‹œ ì‘ì‹œ íƒ€ì´ë¨¸ ì‹œì‘
+            if (!currentZoomedCard.isMine && currentZoomedCard.data.lust_attack > 0)
+            {
+                StartGazeTimer();
+            }
         }
     }
 
@@ -288,8 +338,8 @@ public class GameUIManager : MonoBehaviour
     {
         if (currentZoomedCard)
         {
-            currentZoomedCard.UpdateVisual(); // ÇÊµå Ä«µå °»½Å
-            ShowCardZoom(currentZoomedCard);  // È®´ëÃ¢ °»½Å
+            currentZoomedCard.UpdateVisual(); // ï¿½Êµï¿½ Ä«ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+            ShowCardZoom(currentZoomedCard);  // È®ï¿½ï¿½Ã¢ ï¿½ï¿½ï¿½ï¿½
         }
     }
 
@@ -298,5 +348,85 @@ public class GameUIManager : MonoBehaviour
         CloseAllUI();
         onEventComplete?.Invoke();
         onEventComplete = null;
+    }
+
+    // === ì‘ì‹œ ìœ í˜¹ ì‹œìŠ¤í…œ ===
+
+    void StartGazeTimer()
+    {
+        _gazeTimer = 0f;
+        _isGazingUncensored = true;
+        if (gazeWarningOverlay != null)
+        {
+            gazeWarningOverlay.gameObject.SetActive(true);
+            gazeWarningOverlay.color = new Color(1f, 0f, 0.5f, 0f); // íˆ¬ëª…í•˜ê²Œ ì‹œì‘
+        }
+        if (gazeTimerText != null)
+        {
+            gazeTimerText.gameObject.SetActive(true);
+        }
+    }
+
+    void StopGazeTimer()
+    {
+        _gazeTimer = 0f;
+        _isGazingUncensored = false;
+        if (gazeWarningOverlay != null)
+        {
+            gazeWarningOverlay.gameObject.SetActive(false);
+        }
+        if (gazeTimerText != null)
+        {
+            gazeTimerText.gameObject.SetActive(false);
+        }
+    }
+
+    void UpdateGazeWarningUI()
+    {
+        float progress = _gazeTimer / gazeSeductionTime;
+
+        // ê²½ê³  ì˜¤ë²„ë ˆì´: ì‹œê°„ì´ ì§€ë‚ ìˆ˜ë¡ ë¶‰ê²Œ ë³€í•¨
+        if (gazeWarningOverlay != null && progress >= warningThreshold)
+        {
+            float warningProgress = (progress - warningThreshold) / (1f - warningThreshold);
+            gazeWarningOverlay.color = new Color(1f, 0f, 0.5f, warningProgress * 0.5f);
+        }
+
+        // íƒ€ì´ë¨¸ í…ìŠ¤íŠ¸ í‘œì‹œ
+        if (gazeTimerText != null)
+        {
+            float remaining = gazeSeductionTime - _gazeTimer;
+            if (remaining > 0)
+            {
+                gazeTimerText.text = $"â™¥ {remaining:F1}s";
+                // ìœ„í—˜í• ìˆ˜ë¡ ë¹¨ê°›ê²Œ
+                gazeTimerText.color = Color.Lerp(Color.white, Color.red, progress);
+            }
+        }
+    }
+
+    void TriggerGazeSeduction()
+    {
+        if (currentZoomedCard == null || currentZoomedCard.data == null) return;
+
+        // ìœ í˜¹ ë°ë¯¸ì§€ ê³„ì‚° (ì¹´ë“œì˜ lust_attack ê¸°ë°˜)
+        int lustDamage = Mathf.Max(1, currentZoomedCard.data.lust_attack / 2);
+
+        Debug.Log($"<color=magenta>â˜… ì‘ì‹œ ìœ í˜¹! {currentZoomedCard.data.title}ì—ê²Œ í™€ë ¤ {lustDamage} Lust ì¦ê°€!</color>");
+
+        // í”Œë ˆì´ì–´ì—ê²Œ ìœ í˜¹ ë°ë¯¸ì§€
+        if (HeroPortrait.playerHero != null)
+        {
+            HeroPortrait.playerHero.TakeLustDamage(lustDamage, true);
+        }
+
+        // íƒ€ì´ë¨¸ ë¦¬ì…‹ (ê³„ì† ë³´ê³  ìˆìœ¼ë©´ ë°˜ë³µ ë°œë™)
+        _gazeTimer = 0f;
+
+        // 100% ë„ë‹¬ ì‹œ í´ë¼ì´ë§¥ìŠ¤ ì²´í¬
+        if (HeroPortrait.playerHero != null && HeroPortrait.playerHero.currentLust >= 100)
+        {
+            CloseAllUI();
+        }
     }
 }
