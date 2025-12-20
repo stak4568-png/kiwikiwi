@@ -46,8 +46,7 @@ public class CardDisplay : MonoBehaviour, IPointerClickHandler, IPointerEnterHan
     // 최적화: 캐싱
     private DropZone _cachedDropZone;
     private bool _dropZoneCached = false;
-    private bool _lastIsOnBoard = false;
-
+    
     void Awake() { originalScale = transform.localScale; }
 
     // 최적화: 부모가 변경되면 캐시 무효화 및 도발 재등록

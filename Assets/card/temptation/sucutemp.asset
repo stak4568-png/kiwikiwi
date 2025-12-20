@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d134e21c027847849b152e2e8822cda0, type: 3}
+  m_Name: sucutemp
+  m_EditorClassIdentifier: Assembly-CSharp::TemptationData
+  triggerTime: 15
+  maxRejectCount: 3
+  warningArt: {fileID: -1670654266622654971, guid: edb0e3868c57cd64abb5a7aa3ae06990, type: 3}
+  temptationArt: {fileID: -2062314995586192214, guid: d14a5d41dc133384697cda78f7922a85, type: 3}
+  acceptArt: {fileID: 6482213247728414424, guid: ee97c9fe30d0d374a8573e403cc7e398, type: 3}
+  forcedArt: {fileID: 6074641314603879984, guid: e95b187402288e046b22313150a5683d, type: 3}
+  temptationDialogue: "\uB0A0 \uC6D0\uD558\uB294 \uAC70 \uC544\uB2C8\uC57C...?"
+  rejectDialogues:
+  - "\uC544\uC9C1 \uBC84\uD2F8 \uC218 \uC788\uB2E4\uACE0 \uC0DD\uAC01\uD574...?"
+  - "\uC810\uC810 \uD798\uB4E4\uC5B4\uC9C0\uACE0 \uC788\uC796\uC544..."
+  - "\uC774\uC81C \uB354\uB294 \uB3C4\uB9DD\uCE60 \uC218 \uC5C6\uC5B4\u2665"
+  acceptDialogue: "\uC88B\uC544, \uC798 \uC120\uD0DD\uD588\uC5B4\u2665"
+  forcedDialogue: "\uB354 \uC774\uC0C1 \uCC38\uC744 \uC218 \uC5C6\uAC8C \uB9CC\uB4E4\uC5B4\uC904\uAC8C\u2665"
+  acceptButtonText: "\uBC1B\uC544\uB4E4\uC778\uB2E4..."
+  rejectButtonText: "\uAC70\uBD80\uD55C\uB2E4!"
+  confirmButtonText: ...
+  acceptLustGain: 15
+  rejectLustReduction: 0
+  forcedLustGain: 25
+  forcedButtonText: "\uC800\uD56D\uD560 \uC218 \uC5C6\uB2E4..."
+  forcedAfterDialogues:
+  - "\uADF8\uB807\uC9C0... \uC21C\uC21C\uD788 \uBC1B\uC544\uB4E4\uC5EC..."
+  - "\uC774\uC81C \uB10C \uB0B4 \uAC70\uC57C\u2665"
+  forcedAfterArts:
+  - {fileID: 2771843657865904717, guid: 43a86646cd25a0e498a868ab5c36b56b, type: 3}
