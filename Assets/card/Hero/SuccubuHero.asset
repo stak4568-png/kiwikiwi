@@ -25,3 +25,4 @@ MonoBehaviour:
   seducePower: 15
   seduceDescription: "\uC73C\uD750\uD750\uD750"
   startingWeapon: {fileID: 0}
+  seduceEventArt: {fileID: 2911245892513236901, guid: dfab697e73726eb4585e525ad9eec76f, type: 3}

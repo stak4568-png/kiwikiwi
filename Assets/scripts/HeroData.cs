@@ -33,6 +33,12 @@ public class HeroData : ScriptableObject
 
     [Header("시작 무기 (선택)")]
     public WeaponData startingWeapon;
+
+    // HeroData.cs 내부에 추가
+
+    [Header("유혹 이벤트 전용 연출")]
+    [Tooltip("유혹 패널이 뜰 때 나타날 고퀄리티 전용 일러스트")]
+    public Sprite seduceEventArt;
 }
 
 /// <summary>

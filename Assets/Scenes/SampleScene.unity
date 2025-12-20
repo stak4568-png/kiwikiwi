@@ -210,6 +210,11 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 5908853661492334423, guid: 375c07715c8b22f4d8e5c74d51352d87, type: 3}
   m_PrefabInstance: {fileID: 4409104092621209529}
   m_PrefabAsset: {fileID: 0}
+--- !u!224 &373637852 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 7515564365961499896, guid: fcb6fc8aca8cf154e90ae1651364a7df, type: 3}
+  m_PrefabInstance: {fileID: 1284868686}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &408985989 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 2140197748883110129, guid: c58b1b2aa8839c44185f9cf30d1de0e1, type: 3}
@@ -522,6 +527,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 7410052601120740929, guid: 1ee64ee1adbc72c46b72b9cd84ecd4c5, type: 3}
   m_PrefabInstance: {fileID: 1697939438}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &522345327 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5992793537524998501, guid: 1ee64ee1adbc72c46b72b9cd84ecd4c5, type: 3}
+  m_PrefabInstance: {fileID: 1697939438}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a9140a0265074e479ad28495f31b81a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeroPortrait
 --- !u!224 &593702872 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 7641973726474887250, guid: fcb6fc8aca8cf154e90ae1651364a7df, type: 3}
@@ -844,6 +860,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 7410052601120740929, guid: 1ee64ee1adbc72c46b72b9cd84ecd4c5, type: 3}
   m_PrefabInstance: {fileID: 944413528}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1113016376 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5992793537524998501, guid: 1ee64ee1adbc72c46b72b9cd84ecd4c5, type: 3}
+  m_PrefabInstance: {fileID: 944413528}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5a9140a0265074e479ad28495f31b81a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeroPortrait
 --- !u!114 &1116834623 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 1343760863736056326, guid: 477af815a1621da40a40238b596f1c0d, type: 3}
@@ -1991,13 +2018,29 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 977413430}
     - target: {fileID: 1343760863736056326, guid: 477af815a1621da40a40238b596f1c0d, type: 3}
+      propertyPath: enemyHero
+      value: 
+      objectReference: {fileID: 522345327}
+    - target: {fileID: 1343760863736056326, guid: 477af815a1621da40a40238b596f1c0d, type: 3}
       propertyPath: focusText
       value: 
       objectReference: {fileID: 743282878}
     - target: {fileID: 1343760863736056326, guid: 477af815a1621da40a40238b596f1c0d, type: 3}
+      propertyPath: enemyField
+      value: 
+      objectReference: {fileID: 593702872}
+    - target: {fileID: 1343760863736056326, guid: 477af815a1621da40a40238b596f1c0d, type: 3}
       propertyPath: healthText
       value: 
       objectReference: {fileID: 1715479466}
+    - target: {fileID: 1343760863736056326, guid: 477af815a1621da40a40238b596f1c0d, type: 3}
+      propertyPath: playerHero
+      value: 
+      objectReference: {fileID: 1113016376}
+    - target: {fileID: 1343760863736056326, guid: 477af815a1621da40a40238b596f1c0d, type: 3}
+      propertyPath: playerField
+      value: 
+      objectReference: {fileID: 373637852}
     - target: {fileID: 1343760863736056326, guid: 477af815a1621da40a40238b596f1c0d, type: 3}
       propertyPath: manaContainer
       value: 

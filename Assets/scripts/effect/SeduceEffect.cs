@@ -1,6 +1,3 @@
-// SeduceEffect.cs
-// 플레이어 흥분도를 증가시키는 유혹 효과
-
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewSeduceEffect", menuName = "TCG/Effects/Seduce")]
@@ -10,28 +7,18 @@ public class SeduceEffect : CardEffect
     public int lustAmount = 1;          // 흥분도 증가량
     public bool ignoreManaDef = false;  // 마나 방어 무시 여부
 
-
     public override void Execute(EffectContext context)
     {
         if (context.isCancelled) return;
 
-        if (ignoreManaDef)
+        // 수정됨: GameManager 대신 HeroPortrait.playerHero의 메서드를 호출합니다.
+        if (HeroPortrait.playerHero != null)
         {
-            // 마나 방어 무시 - 직접 흥분도 증가
-            GameManager.instance.playerLust += lustAmount;
-            if (GameManager.instance.playerLust >= 100)
-            {
-                GameManager.instance.playerLust = 100;
-                Debug.Log("★ CLIMAX!");
-            }
-            GameManager.instance.UpdateUI();
-            Debug.Log($"[효과] {effectName}: 흥분도 {lustAmount} 증가! (방어 무시)");
-        }
-        else
-        {
-            // 일반 유혹 데미지 (마나 방어 적용)
-            GameManager.instance.TakeLustDamage(lustAmount);
-            Debug.Log($"[효과] {effectName}: 유혹 공격 {lustAmount}!");
+            // TakeLustDamage(데미지량, 마나방어무시여부)
+            // ignoreManaDef가 true면 마나를 소모하지 않고 즉시 흥분도가 오릅니다.
+            HeroPortrait.playerHero.TakeLustDamage(lustAmount, ignoreManaDef);
+
+            Debug.Log($"[효과] {effectName}: 유혹 공격 {lustAmount}! (방어 무시: {ignoreManaDef})");
         }
     }
 

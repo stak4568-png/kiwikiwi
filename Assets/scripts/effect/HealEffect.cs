@@ -1,6 +1,3 @@
-// HealEffect.cs
-// 체력을 회복하는 효과
-
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewHealEffect", menuName = "TCG/Effects/Heal")]
@@ -9,7 +6,6 @@ public class HealEffect : CardEffect
     [Header("회복 설정")]
     public int healAmount = 1;
     public bool canOverheal = false;    // 최대 체력 초과 회복 가능?
-
 
     public override void Execute(EffectContext context)
     {
@@ -36,9 +32,12 @@ public class HealEffect : CardEffect
                 break;
 
             case EffectTarget.PlayerHero:
-                GameManager.instance.playerHealth += healAmount;
-                Debug.Log($"[효과] {effectName}: 플레이어 체력 {healAmount} 회복!");
-                GameManager.instance.UpdateUI();
+                // 수정됨: GameManager의 변수 대신 HeroPortrait의 Heal 메서드 사용
+                if (HeroPortrait.playerHero != null)
+                {
+                    HeroPortrait.playerHero.Heal(healAmount);
+                    Debug.Log($"[효과] {effectName}: 플레이어 체력 {healAmount} 회복!");
+                }
                 break;
         }
     }

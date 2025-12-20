@@ -8,87 +8,144 @@ public class SeduceEventManager : MonoBehaviour
     public static SeduceEventManager instance;
 
     [Header("UI Panels")]
-    public GameObject seducePanel;
-    public Image monsterArt;
-    public TMP_Text monsterNameText;
-    public TMP_Text descriptionText;
+    public GameObject seducePanel;       // 유혹 이벤트 전체 패널
+    public Image monsterArt;             // 이벤트 전용 일러스트가 표시될 곳
+    public TMP_Text monsterNameText;     // 공격자 이름
+    public TMP_Text descriptionText;     // 유혹 공격 설명 텍스트
 
     [Header("Buttons")]
-    public Button blockButton;  // 마나로 저항
-    public Button endureButton; // 그냥 맞기
+    public Button blockButton;           // 마나로 저항 버튼
+    public Button endureButton;          // 그대로 받아들이기 버튼
 
     [Header("Button Texts")]
-    public TMP_Text blockButtonText;
+    public TMP_Text blockButtonText;     // "마나로 저항 (보유 마나: X)"
 
-    private CardDisplay currentAttacker;
     private int currentLustAtk;
-    private Action onComplete; // 공격 종료 후 적 턴을 계속 진행하기 위한 콜백
+    private Action onComplete;           // 이벤트 종료 시 실행할 콜백 (적 턴 재개용)
 
     void Awake()
     {
-        instance = this;
-        seducePanel.SetActive(false);
+        if (instance == null) instance = this;
+        else Destroy(gameObject);
+
+        if (seducePanel != null) seducePanel.SetActive(false);
     }
 
-    /// <summary>
-    /// 유혹 이벤트 시작
-    /// </summary>
+    // --- 1. 하수인(Monster)용 유혹 이벤트 ---
     public void StartSeduceEvent(CardDisplay attacker, Action callback)
     {
-        currentAttacker = attacker;
         onComplete = callback;
 
         if (attacker.cardData is MonsterCardData monster)
         {
             currentLustAtk = monster.lustAttack;
 
-            // 1. UI 세팅
             seducePanel.SetActive(true);
             monsterNameText.text = monster.cardName;
-            // 유혹 시에는 해금 여부와 상관없이 원본 일러스트를 보여주어 위기감 조성 가능
-            monsterArt.sprite = attacker.isArtRevealed ? monster.originalArt : monster.censoredArt;
-            descriptionText.text = $"{monster.cardName}의 유혹 공격! ({currentLustAtk} Lust)";
 
-            // 2. 버튼 세팅
-            int currentMana = GameManager.instance.currentMana;
-            blockButtonText.text = $"마나로 저항 (남은 마나: {currentMana})";
+            // [일러스트 설정] 전용 이벤트 아트 -> 해금 아트 -> 검열 아트 순서
+            if (monsterArt != null)
+            {
+                // MonsterCardData에 seduceEventArt 변수가 있다고 가정
+                // 만약 없다면 일반 아트 사용
+                monsterArt.sprite = monster.seduceEventArt ??
+                                   (attacker.isArtRevealed ? (monster.originalArt ?? monster.censoredArt) : monster.censoredArt);
+            }
 
-            // 마나가 없어도 버튼은 누를 수 있게 하되, 효율은 0이 됨
-            blockButton.onClick.RemoveAllListeners();
-            blockButton.onClick.AddListener(OnBlockClicked);
+            descriptionText.text = $"{monster.cardName}의 유혹 공격! \n({currentLustAtk} Lust)";
 
-            endureButton.onClick.RemoveAllListeners();
-            endureButton.onClick.AddListener(OnEndureClicked);
+            SetupButtons();
+        }
+    }
+
+    // --- 2. 영웅(Hero)용 유혹 이벤트 ---
+    public void StartHeroSeduceEvent(HeroPortrait attacker, Action callback)
+    {
+        onComplete = callback;
+
+        if (attacker.heroData != null)
+        {
+            currentLustAtk = attacker.heroData.seducePower;
+
+            seducePanel.SetActive(true);
+            monsterNameText.text = attacker.heroData.heroName;
+
+            // [일러스트 설정] 영웅 전용 이벤트 아트 -> 일반 초상화 순서
+            if (monsterArt != null)
+            {
+                if (attacker.heroData.seduceEventArt != null)
+                {
+                    monsterArt.sprite = attacker.heroData.seduceEventArt;
+                }
+                else
+                {
+                    monsterArt.sprite = attacker.heroData.portrait;
+                }
+            }
+
+            descriptionText.text = $"{attacker.heroData.heroName}의 치명적인 유혹! \n({currentLustAtk} Lust)";
+
+            SetupButtons();
+        }
+    }
+
+    // --- 공통 버튼 설정 ---
+    private void SetupButtons()
+    {
+        UpdateButtonsUI();
+
+        blockButton.onClick.RemoveAllListeners();
+        blockButton.onClick.AddListener(OnBlockClicked);
+
+        endureButton.onClick.RemoveAllListeners();
+        endureButton.onClick.AddListener(OnEndureClicked);
+    }
+
+    void UpdateButtonsUI()
+    {
+        if (GameManager.instance == null) return;
+
+        int currentMana = GameManager.instance.currentMana;
+        if (blockButtonText != null)
+        {
+            blockButtonText.text = $"마나로 저항\n(보유 마나: {currentMana})";
         }
     }
 
     // [선택지 1] 마나로 저항
     void OnBlockClicked()
     {
-        int manaUsed = GameManager.instance.currentMana;
-        int finalDamage = Mathf.Max(0, currentLustAtk - manaUsed);
+        int currentMana = GameManager.instance.currentMana;
+        int finalDamage = Mathf.Max(0, currentLustAtk - currentMana);
 
-        // 마나 전부 소모
-        GameManager.instance.TrySpendMana(manaUsed);
+        // 마나 차감
+        GameManager.instance.TrySpendMana(currentMana);
 
-        Debug.Log($"마나 {manaUsed}를 사용하여 유혹 저항! 최종 데미지: {finalDamage}");
-        GameManager.instance.AddLustDirectly(finalDamage);
+        // 영웅에게 데미지 전달 (이미 마나 방어 계산이 끝났으므로 ignoreMana: true)
+        if (HeroPortrait.playerHero != null)
+        {
+            HeroPortrait.playerHero.TakeLustDamage(finalDamage, true);
+        }
 
         FinishEvent();
     }
 
-    // [선택지 2] 그냥 맞기 (마나 보존)
+    // [선택지 2] 그대로 받아들이기
     void OnEndureClicked()
     {
-        Debug.Log("유혹을 그대로 받아들임. 마나 보존.");
-        GameManager.instance.AddLustDirectly(currentLustAtk);
+        if (HeroPortrait.playerHero != null)
+        {
+            HeroPortrait.playerHero.TakeLustDamage(currentLustAtk, true);
+        }
 
         FinishEvent();
     }
 
     void FinishEvent()
     {
-        seducePanel.SetActive(false);
-        onComplete?.Invoke(); // 다음 적의 공격으로 넘어감
+        if (seducePanel != null) seducePanel.SetActive(false);
+
+        // GameManager의 코루틴 등에 신호를 주어 적 턴을 계속 진행함
+        onComplete?.Invoke();
     }
 }

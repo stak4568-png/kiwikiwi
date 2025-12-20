@@ -1,6 +1,3 @@
-// DamageEffect.cs
-// 데미지를 주는 기본 효과
-
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewDamageEffect", menuName = "TCG/Effects/Damage")]
@@ -9,7 +6,6 @@ public class DamageEffect : CardEffect
     [Header("데미지 설정")]
     public int damageAmount = 1;
     public bool canTargetHero = false;  // 영웅도 타겟 가능?
-
 
     public override void Execute(EffectContext context)
     {
@@ -36,9 +32,10 @@ public class DamageEffect : CardEffect
                 break;
 
             case EffectTarget.EnemyHero:
-                if (canTargetHero)
+                // 수정됨: GameManager 대신 HeroPortrait.enemyHero 직접 참조
+                if (canTargetHero && HeroPortrait.enemyHero != null)
                 {
-                    GameManager.instance.DamageEnemyHero(damageAmount);
+                    HeroPortrait.enemyHero.TakeDamage(damageAmount);
                     Debug.Log($"[효과] {effectName}: 적 영웅에게 {damageAmount} 데미지!");
                 }
                 break;
@@ -51,7 +48,6 @@ public class DamageEffect : CardEffect
 
     void DamageAllInZone(ZoneType zone)
     {
-        // DropZone 찾아서 모든 카드에 데미지
         DropZone[] zones = GameObject.FindObjectsByType<DropZone>(FindObjectsSortMode.None);
         foreach (var dz in zones)
         {
