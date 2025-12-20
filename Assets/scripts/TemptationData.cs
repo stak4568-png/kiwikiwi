@@ -52,14 +52,30 @@ public class TemptationData : ScriptableObject
     [Header("선택지 텍스트")]
     public string acceptButtonText = "받아들인다...";
     public string rejectButtonText = "거부한다!";
+    public string confirmButtonText = "...";  // 수락/강제 후 확인 버튼
 
     [Header("효과")]
     [Tooltip("수락 시 Lust 증가량")]
     public int acceptLustGain = 15;
 
+    [Tooltip("거절 성공 시 Lust 감소량")]
+    public int rejectLustReduction = 5;
+
+    [Header("강제 유혹 이벤트")]
     [Tooltip("강제 유혹 시 Lust 증가량")]
     public int forcedLustGain = 25;
 
-    [Tooltip("거절 성공 시 Lust 감소량")]
-    public int rejectLustReduction = 5;
+    [Tooltip("강제 유혹 버튼 텍스트")]
+    public string forcedButtonText = "저항할 수 없다...";
+
+    [Tooltip("강제 유혹 후 대사들 (순차 표시)")]
+    [TextArea(2, 4)]
+    public string[] forcedAfterDialogues = new string[]
+    {
+        "그렇지... 순순히 받아들여...",
+        "이제 넌 내 거야♥"
+    };
+
+    [Tooltip("강제 유혹 후 일러스트들 (대사와 매칭)")]
+    public Sprite[] forcedAfterArts;
 }
