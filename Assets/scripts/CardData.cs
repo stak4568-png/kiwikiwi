@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-// --- [°øÅë Enum Á¤ÀÇ] ---
+// --- [ï¿½ï¿½ï¿½ï¿½ Enum ï¿½ï¿½ï¿½ï¿½] ---
 public enum ZoneType { Hand, PlayerField, EnemyField }
 public enum CardElement { None, Water, Fire, Wind, Earth, Electric, Dark, Light }
 public enum CardType { None = 0, Hero = 5, Character = 10, Spell = 20, Artifact = 30, Equipment = 50 }
@@ -26,7 +26,7 @@ public enum EffectCategory
 }
 
 // ======================================================
-// 2. Ä«µå µ¥ÀÌÅÍ Å¬·¡½º
+// 2. Ä«ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Å¬ï¿½ï¿½ï¿½ï¿½
 // ======================================================
 
 [CreateAssetMenu(fileName = "card", menuName = "TcgEngine/CardData", order = 5)]
@@ -36,8 +36,8 @@ public class CardData : ScriptableObject
 
     [Header("Display")]
     public string title;
-    public Sprite art_full;          // ¿øº» ÀÏ·¯½ºÆ®
-    public Sprite art_censored;      // °Ë¿­µÈ ÀÏ·¯½ºÆ®
+    public Sprite art_full;          // ï¿½ï¿½ï¿½ï¿½ ï¿½Ï·ï¿½ï¿½ï¿½Æ®
+    public Sprite art_censored;      // ï¿½Ë¿ï¿½ï¿½ï¿½ ï¿½Ï·ï¿½ï¿½ï¿½Æ®
     public Sprite art_board;
 
     [Header("Stats")]
@@ -45,35 +45,36 @@ public class CardData : ScriptableObject
     public int mana;
     public int attack;
     public int hp;
-    public int lust_attack;          // À¯È¤ °ø°İ·Â
-    public int mana_defense;   // ¹æ¾î¸¦ À§ÇØ ÇÊ¿äÇÑ ¸¶³ª·®
+    public int lust_attack;          // ï¿½ï¿½È¤ ï¿½ï¿½ï¿½İ·ï¿½
+    public int mana_defense;   // ï¿½ï¿½î¸¦ ï¿½ï¿½ï¿½ï¿½ ï¿½Ê¿ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
     [Header("Keywords")]
     public List<Keyword> keywords = new List<Keyword>();
 
-    // Å°¿öµå È®ÀÎ¿ë ÇïÆÛ ÇÔ¼ö
+    // Å°ï¿½ï¿½ï¿½ï¿½ È®ï¿½Î¿ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½
     public bool HasKeyword(Keyword kw) => keywords != null && keywords.Contains(kw);
 
     [Header("Special Events")]
-    public ClimaxEventData climax_data; // Å¬¶óÀÌ¸Æ½º µ¥ÀÌÅÍ
-    public Sprite seduce_event_art;    // À¯È¤ ÀÌº¥Æ® Àü¿ë ¾ÆÆ®
+    public ClimaxEventData climax_data; // í´ë¼ì´ë§¥ìŠ¤ ë°ì´í„°
+    public Sprite seduce_event_art;    // ìœ í˜¹ ì´ë²¤íŠ¸ ì „ìš© ì•„íŠ¸
+    public TemptationData temptation_data; // ì‘ì‹œ ìœ í˜¹ ë°ì´í„°
 
     [Header("Card Text")]
     [TextArea(3, 5)]
-    public string text;              // ÇØ±İ ÈÄ ¼³¸í
+    public string text;              // ï¿½Ø±ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     [TextArea(3, 5)]
-    public string text_censored;     // ÇØ±İ Àü ¼³¸í
+    public string text_censored;     // ï¿½Ø±ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 
     [Header("FX & Audio")]
     public GameObject death_fx;
     public AudioClip spawn_audio;
 
-    // ¡Ú Ãß°¡µÈ ºÎºĞ: È¿°ú ½Ã½ºÅÛ ¿¬µ¿ ¡Ú
+    // ï¿½ï¿½ ï¿½ß°ï¿½ï¿½ï¿½ ï¿½Îºï¿½: È¿ï¿½ï¿½ ï¿½Ã½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
     [Header("Abilities & Effects")]
-    [Tooltip("ÀÌ Ä«µå°¡ °¡Áø Æ¯¼ö È¿°ú ¸®½ºÆ® (ScriptableObject)")]
+    [Tooltip("ï¿½ï¿½ Ä«ï¿½å°¡ ï¿½ï¿½ï¿½ï¿½ Æ¯ï¿½ï¿½ È¿ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Æ® (ScriptableObject)")]
     public List<CardEffect> effects = new List<CardEffect>();
 
-    // --- ÇïÆÛ ÇÔ¼ö ---
+    // --- ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½ ---
     public bool IsCharacter() => type == CardType.Character;
     public bool IsHero() => type == CardType.Hero;
     public bool IsSpell() => type == CardType.Spell;
